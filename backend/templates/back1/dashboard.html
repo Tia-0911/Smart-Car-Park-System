@@ -1,0 +1,63 @@
+{% extends "back1/base.html" %}
+{% load static %}
+
+{% block content %}
+
+<div class="row g-4 mt-4">
+
+  <div class="col-md-6">
+    <div class="glass-card">
+      <h5>Current Sensor State</h5>
+      
+      <img src="https://cdn-icons-png.flaticon.com/512/2920/2920322.png"
+      width="120"
+      alt="Sensor Image">
+
+      {% if latest %}
+        <div class="metric">Temp - {{ latest.temperature }} °C</div>
+        <div class="metric">Humidity - {{ latest.humidity }} %</div>
+      {% else %}
+        <p class="text-muted">No sensor data available.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="glass-card">
+      <h5>System Status</h5>
+      <p>Backend: <span class="status online">Online</span></p>
+      <p>Database: <span class="status online">Connected</span></p>
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div class="glass-card">
+      <h5>Recent History</h5>
+
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Temperature</th>
+            <th>Humidity</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for d in history %}
+          <tr>
+            <td>{{ d.created_at }}</td>
+            <td>{{ d.temperature }} °C</td>
+            <td>{{ d.humidity }} %</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+
+      </table>
+
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}
