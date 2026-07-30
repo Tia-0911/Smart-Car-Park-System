@@ -5,36 +5,63 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from .models import SensorReading
-from .serializers import SensorReadingSerializer
+from .models import ParkingSlot, Booking, Gate
+from .serializers import ParkingSlotSerializer, BookingSerializer, GateSerializer
 
+
+# ==========================
+# Dashboard
+# ==========================
 
 def dashboard(request):
-    latest = SensorReading.objects.last()
-    history = SensorReading.objects.order_by('-created_at')[:10]
+    slots = ParkingSlot.objects.all()
+    bookings = Booking.objects.all()
+    gates = Gate.objects.all()
 
     return render(request, 'back1/dashboard.html', {
-        'latest': latest,
-        'history': history
+        'slots': slots,
+        'bookings': bookings,
+        'gates': gates
     })
 
 
+# ==========================
+# API Views
+# ==========================
+
 @api_view(["GET"])
-def latest_reading(request):
-    reading = SensorReading.objects.last()
+def parking_slots_api(request):
+    slots = ParkingSlot.objects.all()
 
-    if not reading:
-        return Response({"detail": "No data"}, status=204)
+    serializer = ParkingSlotSerializer(
+        slots,
+        many=True
+    )
 
-    serializer = SensorReadingSerializer(reading)
     return Response(serializer.data)
 
 
 @api_view(["GET"])
-def readings_history(request):
-    readings = SensorReading.objects.order_by("-created_at")[:20]
+def bookings_api(request):
+    bookings = Booking.objects.all()
 
-    serializer = SensorReadingSerializer(readings, many=True)
+    serializer = BookingSerializer(
+        bookings,
+        many=True
+    )
+
+    return Response(serializer.data)
+
+
+@api_view(["GET"])
+def gates_api(request):
+    gates = Gate.objects.all()
+
+    serializer = GateSerializer(
+        gates,
+        many=True
+    )
+
     return Response(serializer.data)
 
 
@@ -42,24 +69,24 @@ def readings_history(request):
 # Class-Based Views
 # ==========================
 
-class SensorReadingListView(ListView):
-    model = SensorReading
-    ordering = ['-created_at']
-    template_name = 'back1/readings.html'
-    context_object_name = 'readings'
-    paginate_by = 10
+class ParkingSlotListView(ListView):
+    model = ParkingSlot
+    template_name = 'back1/parking_slots.html'
+    context_object_name = 'slots'
 
 
-class SensorReadingDetailView(DetailView):
-    model = SensorReading
-    template_name = 'back1/reading_detail.html'
+class BookingListView(ListView):
+    model = Booking
+    template_name = 'back1/bookings.html'
+    context_object_name = 'bookings'
 
 
-class SensorReadingCreateView(LoginRequiredMixin, CreateView):
-    model = SensorReading
+class BookingCreateView(LoginRequiredMixin, CreateView):
+    model = Booking
     fields = [
-        'temperature',
-        'humidity',
-        'device_id'
+        'parking_slot',
+        'start_time',
+        'end_time',
+        'qr_code'
     ]
-    template_name = 'back1/sensorreading_form.html'
+    template_name = 'back1/booking_form.html'
