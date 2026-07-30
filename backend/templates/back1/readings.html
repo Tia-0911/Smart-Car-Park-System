@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sensor Readings</title>
+</head>
+
+<body>
+
+<h1>Sensor Readings</h1>
+
+<a href="{% url 'back1:reading-create' %}">
+    + Create New Reading
+</a>
+
+<br><br>
+
+<a href="{% url 'back1:dashboard' %}">
+    Back to Dashboard
+</a>
+
+<hr>
+
+{% for reading in readings %}
+
+<article>
+
+    <h2>
+        <a href="{% url 'back1:reading-detail' reading.id %}">
+            {{ reading.device_id }}
+        </a>
+    </h2>
+
+    <p>
+        <strong>Temperature:</strong>
+        {{ reading.temperature }} °C
+    </p>
+
+    <p>
+        <strong>Humidity:</strong>
+        {{ reading.humidity }} %
+    </p>
+
+    <p>
+        <strong>Created at:</strong>
+        {{ reading.created_at }}
+    </p>
+
+    <hr>
+
+</article>
+
+{% empty %}
+
+<p>No sensor data available.</p>
+
+{% endfor %}
+
+</body>
+</html>

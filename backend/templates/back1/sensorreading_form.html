@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Create Sensor Reading</title>
+</head>
+
+<body>
+
+<h1>Create Sensor Reading</h1>
+
+<form method="POST">
+
+    {% csrf_token %}
+
+    {{ form.as_p }}
+
+    <button type="submit">
+        Submit
+    </button>
+
+</form>
+
+<br>
+
+<a href="{% url 'back1:readings' %}">
+    Back to readings
+</a>
+
+</body>
+</html>
