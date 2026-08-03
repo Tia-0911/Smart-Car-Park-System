@@ -1,46 +1,142 @@
 from django.urls import path
 from . import views
 
+
 app_name = 'back1'
+
 
 urlpatterns = [
 
-    path('', views.dashboard, name='dashboard'),
 
-    # API
+    # ==========================
+    # Dashboard
+    # ==========================
+
     path(
-        'api/sensors/latest',
+        '',
+        views.dashboard,
+        name='dashboard'
+    ),
+
+
+
+
+    # ==========================
+    # Sensor API
+    # ==========================
+
+
+    path(
+        'api/sensors/latest/',
         views.latest_reading,
         name='latest_reading'
     ),
 
+
+
     path(
-        'api/sensors/history',
+        'api/sensors/history/',
         views.readings_history,
         name='readings_history'
     ),
 
 
-    # Class-Based Views (Sensor Readings)
 
-    # List all readings
+    # New Sensor Update API
     path(
-        'readings/',
-        views.SensorReadingListView.as_view(),
-        name='readings'
+        'api/sensors/update/',
+        views.sensor_update,
+        name='sensor_update'
     ),
 
-    # Detail page
+
+
+
+
+
+    # ==========================
+    # Parking API
+    # ==========================
+
+
     path(
-        'readings/<int:pk>/',
-        views.SensorReadingDetailView.as_view(),
-        name='reading-detail'
+        'api/parking-slots/',
+        views.parking_slots_api,
+        name='parking_slots_api'
     ),
 
-    # Create new reading
+
+
+
+
+
+    # ==========================
+    # Booking API
+    # ==========================
+
+
     path(
-        'readings/new/',
-        views.SensorReadingCreateView.as_view(),
-        name='reading-create'
+        'api/bookings/',
+        views.bookings_api,
+        name='bookings_api'
     ),
+
+
+
+
+
+
+    # ==========================
+    # Gate API
+    # ==========================
+
+
+    path(
+        'api/gates/',
+        views.gates_api,
+        name='gates_api'
+    ),
+
+
+
+    path(
+        'api/gates/<int:gate_id>/open/',
+        views.open_gate,
+        name='open_gate'
+    ),
+
+
+
+    path(
+        'api/gates/<int:gate_id>/close/',
+        views.close_gate,
+        name='close_gate'
+    ),
+
+
+
+
+
+
+
+    # ==========================
+    # Booking Pages
+    # ==========================
+
+
+    path(
+        'bookings/',
+        views.BookingListView.as_view(),
+        name='bookings'
+    ),
+
+
+
+    path(
+        'bookings/new/',
+        views.BookingCreateView.as_view(),
+        name='booking-create'
+    ),
+
+
 ]
