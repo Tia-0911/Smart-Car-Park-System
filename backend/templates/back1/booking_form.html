@@ -1,0 +1,493 @@
+{% extends "back1/base.html" %}
+
+{% block content %}
+
+<div class="glass-card mt-4 p-4">
+
+<h2>
+Create Parking Booking
+</h2>
+
+
+<form method="POST">
+
+{% csrf_token %}
+
+
+
+<!-- Date -->
+
+<label>
+Select Date
+</label>
+
+
+<input 
+type="date"
+name="booking_date"
+id="booking_date"
+class="form-control mb-4"
+value="{{ request.GET.date }}"
+required
+>
+
+
+
+<!-- Time Dropdown -->
+
+<label>
+Select Time (Multiple Hours)
+</label>
+
+
+<div class="dropdown mb-3">
+
+
+<button 
+class="btn btn-light border dropdown-toggle w-100 text-start"
+type="button"
+id="timeDropdown"
+data-bs-toggle="dropdown">
+
+Select hours
+
+</button>
+
+
+
+<ul class="dropdown-menu w-100 p-3"
+style="max-height:300px; overflow-y:auto;">
+
+
+{% for hour in hours %}
+
+
+<li>
+
+<div class="form-check">
+
+
+<input
+
+class="form-check-input time-checkbox"
+
+type="checkbox"
+
+value="{{hour}}"
+
+id="time{{forloop.counter}}"
+
+{% if request.GET.start and request.GET.end %}
+
+{% if hour >= request.GET.start and hour < request.GET.end %}
+
+checked
+
+{% endif %}
+
+{% endif %}
+
+>
+
+
+<label
+
+class="form-check-label"
+
+for="time{{forloop.counter}}">
+
+{{hour}}
+
+</label>
+
+
+</div>
+
+</li>
+
+
+{% endfor %}
+
+
+
+<hr>
+
+
+<li class="text-center">
+
+
+<button
+
+type="button"
+
+class="btn btn-success btn-sm"
+
+id="doneTime">
+
+Done
+
+</button>
+
+
+</li>
+
+
+</ul>
+
+
+</div>
+
+
+
+
+
+<h5>
+Selected Time:
+</h5>
+
+
+<p id="selected_time">
+
+{% if request.GET.start and request.GET.end %}
+
+{{request.GET.start}} - {{request.GET.end}}
+
+{% else %}
+
+No time selected
+
+{% endif %}
+
+</p>
+
+
+
+
+
+<!-- Hidden fields -->
+
+
+<input 
+type="hidden"
+name="start_time"
+id="start_time"
+value="{{request.GET.start}}"
+>
+
+
+
+<input 
+type="hidden"
+name="end_time"
+id="end_time"
+value="{{request.GET.end}}"
+>
+
+
+
+
+
+
+<!-- Parking Availability -->
+
+
+<h3 class="mt-4">
+Parking Availability
+</h3>
+
+
+
+<div class="row">
+
+
+{% for slot in slot_status %}
+
+
+
+<div class="col-md-2 mb-3">
+
+
+<div class="card text-center p-3">
+
+
+<h5>
+{{slot.slot_number}}
+</h5>
+
+
+
+{% if slot.available %}
+
+
+<span class="badge bg-success">
+Available
+</span>
+
+
+<br>
+
+
+<input
+
+type="radio"
+
+name="parking_slot"
+
+value="{{slot.id}}"
+
+required
+
+>
+
+
+{% else %}
+
+
+<span class="badge bg-danger">
+Full
+</span>
+
+
+{% endif %}
+
+
+
+</div>
+
+
+</div>
+
+
+{% endfor %}
+
+
+</div>
+
+
+
+
+
+
+<button 
+
+class="btn btn-success mt-3"
+
+type="submit"
+
+>
+
+BOOK NOW
+
+</button>
+
+
+
+
+</form>
+
+
+</div>
+
+
+
+
+
+
+
+<script>
+
+
+const checkboxes = document.querySelectorAll(
+".time-checkbox"
+);
+
+
+
+const display = document.getElementById(
+"selected_time"
+);
+
+
+
+const startInput = document.getElementById(
+"start_time"
+);
+
+
+
+const endInput = document.getElementById(
+"end_time"
+);
+
+
+
+let selectedStart = startInput.value;
+
+let selectedEnd = endInput.value;
+
+
+
+checkboxes.forEach(box => {
+
+
+box.addEventListener(
+"change",
+function(){
+
+
+let selected = [];
+
+
+
+checkboxes.forEach(item=>{
+
+
+if(item.checked){
+
+selected.push(item.value);
+
+}
+
+
+});
+
+
+
+if(selected.length > 0){
+
+
+selected.sort();
+
+
+
+let start = selected[0];
+
+
+let lastHour = parseInt(
+selected[selected.length-1].split(":")[0]
+);
+
+
+
+let endHour = lastHour + 1;
+
+
+
+let end = 
+String(endHour).padStart(2,"0")
++":00";
+
+
+
+display.innerHTML =
+start + " - " + end;
+
+
+
+startInput.value = start;
+
+endInput.value = end;
+
+
+selectedStart = start;
+
+selectedEnd = end;
+
+
+}
+
+
+else{
+
+
+display.innerHTML =
+"No time selected";
+
+
+startInput.value="";
+
+endInput.value="";
+
+
+selectedStart="";
+
+selectedEnd="";
+
+
+}
+
+
+
+});
+
+
+});
+
+
+
+
+
+
+
+// Done button
+
+const doneButton = document.getElementById(
+"doneTime"
+);
+
+
+
+const dropdownButton = document.getElementById(
+"timeDropdown"
+);
+
+
+
+doneButton.addEventListener(
+"click",
+function(){
+
+
+
+let dropdown =
+bootstrap.Dropdown.getOrCreateInstance(
+dropdownButton
+);
+
+
+dropdown.hide();
+
+
+
+let date =
+document.getElementById(
+"booking_date"
+).value;
+
+
+
+if(
+date &&
+selectedStart &&
+selectedEnd
+){
+
+
+window.location.href =
+
+`?date=${date}&start=${selectedStart}&end=${selectedEnd}`;
+
+
+}
+
+
+
+});
+
+
+
+</script>
+
+
+
+{% endblock %}

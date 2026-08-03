@@ -3,61 +3,1255 @@
 
 {% block content %}
 
-<div class="row g-4 mt-4">
 
-  <div class="col-md-6">
-    <div class="glass-card">
-      <h5>Current Sensor State</h5>
-      
-      <img src="https://cdn-icons-png.flaticon.com/512/2920/2920322.png"
-      width="120"
-      alt="Sensor Image">
+<!-- =========================
+TOP SUMMARY CARDS
+========================= -->
 
-      {% if latest %}
-        <div class="metric">Temp - {{ latest.temperature }} °C</div>
-        <div class="metric">Humidity - {{ latest.humidity }} %</div>
-      {% else %}
-        <p class="text-muted">No sensor data available.</p>
-      {% endif %}
-    </div>
-  </div>
+<div class="dashboard-grid">
 
-  <div class="col-md-6">
-    <div class="glass-card">
-      <h5>System Status</h5>
-      <p>Backend: <span class="status online">Online</span></p>
-      <p>Database: <span class="status online">Connected</span></p>
-    </div>
-  </div>
 
-  <div class="col-12">
-    <div class="glass-card">
-      <h5>Recent History</h5>
+<div class="summary-card">
 
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Time</th>
-            <th>Temperature</th>
-            <th>Humidity</th>
-          </tr>
-        </thead>
+<div class="icon-circle green">
+<i class="bi bi-p-square-fill"></i>
+</div>
 
-        <tbody>
-          {% for d in history %}
-          <tr>
-            <td>{{ d.created_at }}</td>
-            <td>{{ d.temperature }} °C</td>
-            <td>{{ d.humidity }} %</td>
-          </tr>
-          {% endfor %}
-        </tbody>
+<div>
+<p>Total Slots</p>
 
-      </table>
+<h2>
+{{ total_slots }}
+</h2>
 
-    </div>
-  </div>
+<small>
+All parking slots
+</small>
 
 </div>
+
+</div>
+
+
+
+
+
+<div class="summary-card">
+
+<div class="icon-circle mint">
+
+<i class="bi bi-car-front-fill"></i>
+
+</div>
+
+
+<div>
+
+<p>
+Available
+</p>
+
+
+<h2 class="green-text">
+
+{{ available_slots }}
+
+</h2>
+
+
+<small>
+Available spaces
+</small>
+
+
+</div>
+
+</div>
+
+
+
+
+
+
+<div class="summary-card">
+
+
+<div class="icon-circle pink">
+
+<i class="bi bi-car-front"></i>
+
+</div>
+
+
+<div>
+
+
+<p>
+Occupied
+</p>
+
+
+<h2 class="pink-text">
+
+{{ occupied_slots }}
+
+</h2>
+
+
+<small>
+Currently occupied
+</small>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+
+<div class="summary-card">
+
+
+<div class="icon-circle purple">
+
+<i class="bi bi-calendar-check"></i>
+
+
+</div>
+
+
+
+<div>
+
+
+<p>
+Active Bookings
+</p>
+
+
+<h2>
+
+{{ bookings.count }}
+
+</h2>
+
+
+<small>
+Today's booking
+</small>
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+
+
+<!-- =========================
+SENSOR + SYSTEM STATUS
+========================= -->
+
+
+<div class="dashboard-grid-2">
+
+
+
+<!-- SENSOR STATUS -->
+
+
+<div class="modern-card">
+
+
+<div class="card-title">
+
+
+<h4>
+Sensor Status
+</h4>
+
+
+
+<span class="status online">
+
+● Online
+
+</span>
+
+
+
+</div>
+
+
+
+
+{% if latest %}
+
+
+
+<div class="sensor-box">
+
+
+
+<div class="sensor-icon">
+
+<i class="bi bi-broadcast-pin"></i>
+
+
+</div>
+
+
+
+<div>
+
+
+<h5>
+
+{{ latest.sensor_type }}
+
+</h5>
+
+
+<p>
+
+Detecting parking status
+
+</p>
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+<hr>
+
+
+
+
+
+<div class="info-row">
+
+
+<span>
+Status
+</span>
+
+
+<b>
+
+{{ latest.value }}
+
+</b>
+
+
+</div>
+
+
+
+
+
+<div class="info-row">
+
+
+<span>
+Parking Slot
+</span>
+
+
+<b>
+
+{{ latest.parking_slot.slot_number }}
+
+</b>
+
+
+</div>
+
+
+
+
+
+<div class="info-row">
+
+
+<span>
+Last Update
+</span>
+
+
+<b>
+
+{{ latest.created_at }}
+
+</b>
+
+
+</div>
+
+
+
+
+{% else %}
+
+
+<p>
+No sensor data
+</p>
+
+
+
+{% endif %}
+
+
+
+</div>
+
+<!-- SYSTEM STATUS -->
+
+
+<div class="modern-card">
+
+
+<h4>
+System Status
+</h4>
+
+
+
+
+<div class="system-box">
+
+
+<div>
+
+<i class="bi bi-server"></i>
+
+Backend
+
+</div>
+
+
+<span class="badge bg-success">
+
+Online
+
+</span>
+
+
+</div>
+
+
+
+
+
+<div class="system-box">
+
+
+<div>
+
+<i class="bi bi-database"></i>
+
+Database
+
+</div>
+
+
+<span class="badge bg-success">
+
+Connected
+
+</span>
+
+
+</div>
+
+
+
+
+
+<div class="system-box">
+
+
+<div>
+
+<i class="bi bi-broadcast"></i>
+
+Sensors
+
+</div>
+
+
+<span class="badge bg-success">
+
+Active
+
+</span>
+
+
+</div>
+
+
+
+
+
+<div class="system-box">
+
+
+<div>
+
+<i class="bi bi-clock"></i>
+
+Last Sync
+
+</div>
+
+
+<span>
+
+2 seconds ago
+
+</span>
+
+
+</div>
+
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+
+
+
+<!-- =========================
+PARKING MAP
+========================= -->
+
+
+<div class="modern-card full-width">
+
+
+
+<div class="card-title">
+
+
+<h4>
+
+Parking Lot Overview
+
+</h4>
+
+
+
+<div class="legend">
+
+
+<span>
+
+● Available
+
+</span>
+
+
+
+<span>
+
+● Occupied
+
+</span>
+
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+<div class="parking-layout">
+
+
+
+<!-- LEFT ENTRANCE -->
+
+
+<div class="gate-side entrance">
+
+
+<i class="bi bi-box-arrow-in-right"></i>
+
+
+<span>
+
+ENTRANCE
+
+</span>
+
+
+</div>
+
+
+
+
+
+
+
+<!-- PARKING SLOTS -->
+
+
+<div class="parking-map">
+
+
+
+{% for slot in slots %}
+
+
+
+
+<div class="parking-slot
+
+{% if slot.status == 'Occupied' %}
+
+occupied
+
+{% else %}
+
+available
+
+{% endif %}
+
+">
+
+
+
+<i class="bi bi-car-front-fill"></i>
+
+
+
+
+<h5>
+
+{{ slot.slot_number }}
+
+</h5>
+
+
+
+
+<span>
+
+
+{% if slot.status == "Occupied" %}
+
+
+Occupied
+
+
+{% else %}
+
+
+Available
+
+
+{% endif %}
+
+
+
+</span>
+
+
+
+</div>
+
+
+
+
+{% endfor %}
+
+
+
+
+</div>
+
+
+
+
+
+
+
+
+<!-- RIGHT EXIT -->
+
+
+<div class="gate-side exit">
+
+
+<i class="bi bi-box-arrow-right"></i>
+
+
+
+<span>
+
+EXIT
+
+</span>
+
+
+</div>
+
+
+
+
+</div>
+
+
+
+</div>
+
+<!-- =========================
+OCCUPANCY + GATE
+========================= -->
+
+
+<div class="dashboard-grid-2">
+
+
+
+<!-- OCCUPANCY -->
+
+
+<div class="modern-card occupancy-card">
+
+
+<h4>
+Occupancy
+</h4>
+
+
+
+
+<div class="circle-chart"
+style="--percentage: {{ occupancy_percentage }}%;">
+
+
+
+<div class="circle-number">
+
+
+{{ occupancy_percentage }}%
+
+
+
+<span>
+Occupied
+</span>
+
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+<p class="text-center mt-4">
+
+
+{{ occupied_slots }} / {{ total_slots }} slots
+
+
+</p>
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+<!-- GATE CONTROL -->
+
+
+<div class="modern-card">
+
+
+<h4>
+Gate Control
+</h4>
+
+
+
+
+{% for gate in gates %}
+
+
+
+
+<div class="gate-image
+
+{% if gate.is_open %}
+
+gate-danger
+
+{% else %}
+
+gate-safe
+
+{% endif %}
+
+">
+
+
+{% if gate.is_open %}
+
+<i class="bi bi-signpost-2-fill"></i>
+
+{% else %}
+
+<i class="bi bi-signpost-2"></i>
+
+{% endif %}
+
+
+</div>
+
+
+
+
+
+
+{% if gate.is_open %}
+
+
+
+<div class="gate-open-status">
+
+
+● Open
+
+
+</div>
+
+
+
+
+{% else %}
+
+
+
+
+<div class="gate-close-status">
+
+
+● Closed
+
+
+</div>
+
+
+
+
+{% endif %}
+
+
+
+
+
+
+
+<button
+
+class="gate-open"
+
+onclick="openGate({{gate.id}})"
+
+>
+
+
+
+<i class="bi bi-unlock"></i>
+
+
+Open Gate
+
+
+
+</button>
+
+
+
+
+
+
+
+<button
+
+class="gate-close"
+
+onclick="closeGate({{gate.id}})"
+
+>
+
+
+
+<i class="bi bi-lock"></i>
+
+
+Close Gate
+
+
+
+</button>
+
+
+
+
+
+{% endfor %}
+
+
+
+
+</div>
+
+
+
+</div>
+
+<!-- =========================
+RECENT ACTIVITY + BOOKINGS
+========================= -->
+
+
+<div class="dashboard-grid-2">
+
+
+
+<!-- RECENT ACTIVITY -->
+
+
+<div class="modern-card">
+
+
+<div class="card-title">
+
+
+<h4>
+Recent Activity
+</h4>
+
+
+
+<span>
+View all >
+</span>
+
+
+
+</div>
+
+
+
+
+
+{% for d in history %}
+
+
+
+
+<div class="activity-item">
+
+
+
+
+
+<div class="activity-icon">
+
+
+<i class="bi bi-car-front-fill"></i>
+
+
+</div>
+
+
+
+
+
+
+<div>
+
+
+
+<b>
+Ultrasonic sensor detected car
+</b>
+
+
+
+
+<p>
+
+
+{{ d.created_at }}
+
+
+-
+
+
+{{ d.parking_slot.slot_number }}
+
+
+
+</p>
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<span class="active-label">
+
+
+{{ d.value }}
+
+
+
+</span>
+
+
+
+
+
+
+</div>
+
+
+
+
+
+{% empty %}
+
+
+
+<p>
+No activity available
+</p>
+
+
+
+{% endfor %}
+
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+<!-- RECENT BOOKINGS -->
+
+
+<div class="modern-card">
+
+
+
+<div class="card-title">
+
+
+<h4>
+Recent Bookings
+</h4>
+
+
+
+<span>
+View all >
+</span>
+
+
+
+</div>
+
+
+
+
+
+
+
+{% for booking in latest_bookings %}
+
+
+
+
+
+<div class="booking-item">
+
+
+
+
+
+
+<div class="slot-badge">
+
+
+{{ booking.parking_slot.slot_number }}
+
+
+
+</div>
+
+
+
+
+
+
+
+<div>
+
+
+
+<b>
+
+
+{{ booking.user.username }}
+
+
+
+</b>
+
+
+
+
+<p>
+
+
+{{ booking.booking_date }}
+
+
+
+<br>
+
+
+
+{{ booking.start_time }}
+
+
+
+-
+
+
+
+{{ booking.end_time }}
+
+
+
+
+</p>
+
+
+
+</div>
+
+
+
+
+
+
+
+<span class="active-label">
+
+
+Active
+
+
+
+</span>
+
+
+
+
+
+</div>
+
+
+
+
+
+
+{% empty %}
+
+
+
+<p>
+No booking available
+</p>
+
+
+
+{% endfor %}
+
+
+
+
+
+
+</div>
+
+
+
+
+
+</div>
+
+<script>
+
+function openGate(id){
+
+fetch(`/api/gates/${id}/open/`, {
+    method: "POST",
+    headers:{
+        "X-CSRFToken": getCookie("csrftoken")
+    }
+})
+
+.then(response => response.json())
+
+.then(data => {
+
+console.log(data);
+
+location.reload();
+
+})
+
+.catch(error => {
+
+console.log(error);
+
+alert("Error opening gate");
+
+});
+
+}
+
+
+
+
+function closeGate(id){
+
+fetch(`/api/gates/${id}/close/`, {
+    method: "POST",
+    headers:{
+        "X-CSRFToken": getCookie("csrftoken")
+    }
+})
+
+.then(response => response.json())
+
+.then(data => {
+
+console.log(data);
+
+location.reload();
+
+})
+
+.catch(error => {
+
+console.log(error);
+
+alert("Error closing gate");
+
+});
+
+}
+
+
+
+
+function getCookie(name){
+
+let cookieValue = null;
+
+if(document.cookie){
+
+let cookies = document.cookie.split(';');
+
+for(let i=0;i<cookies.length;i++){
+
+let cookie = cookies[i].trim();
+
+if(cookie.substring(0,name.length+1) === (name+'=')){
+
+cookieValue = decodeURIComponent(
+cookie.substring(name.length+1)
+);
+
+break;
+
+}
+
+}
+
+}
+
+return cookieValue;
+
+}
+
+
+</script>
+
+
 
 {% endblock %}

@@ -1,81 +1,1336 @@
+/* ==========================
+   SMART CAR PARK DASHBOARD
+   CLEAN VERSION
+========================== */
+
+
+/* ==========================
+   GLOBAL
+========================== */
+
+
 body {
-min-height: 100vh;
-background:
-linear-gradient(
-rgba(245, 241, 234, 0.55),
-rgba(245, 241, 234, 0.75)
-),
-url("../images/plant-bg.jpg") center / cover no-repeat fixed;
 
-font-family: "Inter", system-ui, sans-serif;
-color: #2b2b2b;
+    min-height:100vh;
+
+    background:
+    linear-gradient(
+        rgba(245,241,234,0.65),
+        rgba(245,241,234,0.8)
+    ),
+    url("../images/plant-bg.jpg")
+    center / cover fixed;
+
+
+    font-family:
+    "Inter",
+    system-ui,
+    sans-serif;
+
+
+    color:#263238;
+
 }
 
 
-.app-header {
-padding: 1rem 2rem;
-font-weight: 600;
-background: rgba(255, 255, 255, 0.55);
-backdrop-filter: blur(10px);
-border-bottom: 1px solid rgba(0,0,0,0.06);
+
+
+/* ==========================
+   LAYOUT
+========================== */
+
+
+.layout {
+
+    display:flex;
+
 }
 
 
-.app-footer {
-text-align: center;
-padding: 1rem;
-font-size: 0.85rem;
-opacity: 0.6;
+
+.main-content {
+
+    flex:1;
+
+    padding:30px;
+
 }
 
 
-.glass-card {
-background: rgba(255, 255, 255, 0.45);
-backdrop-filter: blur(18px) saturate(140%);
--webkit-backdrop-filter: blur(18px) saturate(140%);
 
-border-radius: 18px;
-padding: 1.75rem;
+.topbar {
 
-border: 1px solid rgba(255, 255, 255, 0.4);
-box-shadow:
-0 20px 40px rgba(0,0,0,0.12),
-inset 0 1px 0 rgba(255,255,255,0.4);
+    display:flex;
 
-animation: floatIn 0.9s cubic-bezier(.2,.8,.2,1) forwards;
-transition: transform 0.35s ease, box-shadow 0.35s ease, background 0.35s ease;
-}
+    justify-content:space-between;
 
-.glass-card:hover {
-transform: translateY(-8px);
-background: rgba(255, 255, 255, 0.6);
-box-shadow:
-0 35px 70px rgba(0,0,0,0.18),
-inset 0 1px 0 rgba(255,255,255,0.5);
+    align-items:center;
+
+    margin-bottom:25px;
+
 }
 
 
-.status {
-font-weight: 600;
+
+.topbar h1 {
+
+    font-size:32px;
+
+    font-weight:700;
+
 }
+
+
+
+.topbar p {
+
+    color:#777;
+
+}
+
+
+
+
+
+/* ==========================
+ SIDEBAR
+========================== */
+
+
+.sidebar {
+
+    width:260px;
+
+    min-height:100vh;
+
+    padding:25px;
+
+
+    background:
+    rgba(255,255,255,0.65);
+
+
+    backdrop-filter:blur(15px);
+
+
+}
+
+
+
+.logo {
+
+    display:flex;
+
+    align-items:center;
+
+    gap:12px;
+
+}
+
+
+
+.logo i {
+
+    font-size:35px;
+
+    color:#4d9078;
+
+}
+
+
+
+.logo h4 {
+
+    margin:0;
+
+}
+
+
+
+.sidebar a {
+
+
+    display:flex;
+
+    align-items:center;
+
+    gap:15px;
+
+
+    padding:14px;
+
+
+    margin:8px 0;
+
+
+    border-radius:15px;
+
+
+    color:#555;
+
+
+    text-decoration:none;
+
+
+}
+
+
+
+.sidebar a:hover,
+.sidebar a.active {
+
+
+    background:#dff3e8;
+
+    color:#208c63;
+
+
+}
+
+
+
+
+
+/* ==========================
+ GRID
+========================== */
+
+
+.dashboard-grid {
+
+
+    display:grid;
+
+
+    grid-template-columns:
+    repeat(4,1fr);
+
+
+    gap:22px;
+
+
+}
+
+
+
+
+.dashboard-grid-2 {
+
+
+    display:grid;
+
+
+    grid-template-columns:
+    repeat(2,1fr);
+
+
+    gap:22px;
+
+
+    margin-top:22px;
+
+
+}
+
+
+
+.full-width {
+
+    width:100%;
+
+    margin-top:22px;
+
+}
+
+
+
+
+
+
+/* ==========================
+ SUMMARY CARD
+========================== */
+
+
+.summary-card {
+
+
+    background:
+    rgba(255,255,255,0.75);
+
+
+    border-radius:25px;
+
+
+    padding:25px;
+
+
+    display:flex;
+
+
+    align-items:center;
+
+
+    gap:20px;
+
+
+    box-shadow:
+    0 15px 35px rgba(0,0,0,0.08);
+
+
+    transition:.3s;
+
+
+}
+
+
+
+.summary-card:hover {
+
+
+    transform:translateY(-5px);
+
+
+}
+
+
+
+.summary-card p {
+
+
+    margin:0;
+
+    color:#777;
+
+
+}
+
+
+
+.summary-card h2 {
+
+
+    margin:5px 0;
+
+
+    font-size:40px;
+
+
+}
+
+
+
+.summary-card small {
+
+
+    color:#999;
+
+
+}
+
+
+
+
+
+
+.icon-circle {
+
+
+    width:60px;
+
+    height:60px;
+
+
+    border-radius:50%;
+
+
+    display:flex;
+
+
+    align-items:center;
+
+
+    justify-content:center;
+
+
+    font-size:25px;
+
+
+}
+
+
+
+.icon-circle.green,
+.icon-circle.mint {
+
+
+    background:#dcf5ef;
+
+    color:#208c63;
+
+
+}
+
+
+
+.icon-circle.pink {
+
+
+    background:#ffe1e8;
+
+    color:#ef6680;
+
+
+}
+
+
+
+.icon-circle.purple {
+
+
+    background:#eee5ff;
+
+    color:#8067d9;
+
+
+}
+
+
+
+
+
+/* ==========================
+ MODERN CARD
+========================== */
+
+
+.modern-card {
+
+
+    background:
+    rgba(255,255,255,0.75);
+
+
+    backdrop-filter:blur(15px);
+
+
+    border-radius:25px;
+
+
+    padding:30px;
+
+
+    box-shadow:
+
+    0 15px 35px rgba(0,0,0,0.08);
+
+
+}
+
+
+
+
+.modern-card h4 {
+
+
+    font-weight:600;
+
+
+    margin-bottom:25px;
+
+
+}
+
+
+
+
+
+.card-title {
+
+
+    display:flex;
+
+
+    justify-content:space-between;
+
+
+    align-items:center;
+
+
+}
+
+
+
+
+
+
+/* ==========================
+ SENSOR
+========================== */
+
+
+.sensor-box {
+
+
+    display:flex;
+
+
+    align-items:center;
+
+
+    gap:20px;
+
+
+}
+
+
+
+.sensor-icon {
+
+
+    width:70px;
+
+
+    height:70px;
+
+
+    border-radius:50%;
+
+
+    background:#dcf5ef;
+
+
+    display:flex;
+
+
+    justify-content:center;
+
+
+    align-items:center;
+
+
+    font-size:30px;
+
+
+    color:#208c63;
+
+
+}
+
+
+
+
+.info-row {
+
+
+    display:flex;
+
+
+    justify-content:space-between;
+
+
+    padding:12px 0;
+
+
+}
+
+
+
+
+
+
+/* ==========================
+ SYSTEM STATUS
+========================== */
+
+
+.system-box {
+
+
+    display:flex;
+
+
+    justify-content:space-between;
+
+
+    align-items:center;
+
+
+    padding:15px;
+
+
+    margin-bottom:12px;
+
+
+    border-radius:15px;
+
+
+    background:#f8faf9;
+
+
+}
+
+
+
+.system-box i {
+
+
+    color:#3d947c;
+
+
+    margin-right:10px;
+
+
+}
+
+/* ==========================
+ PARKING MAP
+========================== */
+
+
+.parking-road {
+    .parking-layout{
+
+display:flex;
+
+align-items:center;
+
+gap:25px;
+
+background:#f3f4f4;
+
+border-radius:25px;
+
+padding:30px;
+
+}
+
+
+
+.gate-side{
+
+display:flex;
+
+flex-direction:column;
+
+align-items:center;
+
+justify-content:center;
+
+font-weight:700;
+
+color:#777;
+
+width:90px;
+
+}
+
+
+
+.gate-side i{
+
+font-size:35px;
+
+margin-bottom:10px;
+
+}
+
+
+
+.parking-layout .parking-map{
+
+flex:1;
+
+display:grid;
+
+grid-template-columns:repeat(3,1fr);
+
+gap:25px;
+
+}
+
+
+    background:#f3f4f4;
+
+
+    border-radius:25px;
+
+
+    padding:25px;
+
+
+}
+
+
+
+.entrance,
+.exit {
+
+
+    text-align:center;
+
+
+    font-weight:700;
+
+
+    color:#777;
+
+
+    margin:15px;
+
+
+}
+
+
+
+
+
+.parking-map {
+
+
+    display:grid;
+
+
+    grid-template-columns:
+    repeat(3,1fr);
+
+
+    gap:25px;
+
+
+}
+
+
+
+.parking-slot {
+
+
+    height:130px;
+
+
+    border-radius:22px;
+
+
+    display:flex;
+
+
+    flex-direction:column;
+
+
+    align-items:center;
+
+
+    justify-content:center;
+
+
+    font-size:18px;
+
+
+    transition:.3s;
+
+
+}
+
+
+
+.parking-slot:hover {
+
+
+    transform:translateY(-5px);
+
+
+}
+
+
+
+.parking-slot i {
+
+
+    font-size:35px;
+
+
+    margin-bottom:10px;
+
+
+}
+
+
+
+.parking-slot.available {
+
+
+    background:#dcf5e8;
+
+
+    color:#208c63;
+
+
+}
+
+
+
+.parking-slot.occupied {
+
+
+    background:#ffe1e8;
+
+
+    color:#ef6680;
+
+
+}
+
+
+
+
+
+/* ==========================
+ OCCUPANCY
+========================== */
+
+
+.occupancy-card {
+
+
+    text-align:center;
+
+
+}
+
+
+
+.circle-chart {
+
+
+    width:160px;
+
+
+    height:160px;
+
+
+    border-radius:50%;
+
+
+    margin:30px auto;
+
+
+    background:
+
+
+    conic-gradient(
+
+    #6fcf97 0% 50%,
+
+    #ffd6df 50% 100%
+
+    );
+
+
+    display:flex;
+
+
+    justify-content:center;
+
+
+    align-items:center;
+
+
+}
+
+
+
+.circle-number {
+
+
+    width:120px;
+
+
+    height:120px;
+
+
+    border-radius:50%;
+
+
+    background:white;
+
+
+    display:flex;
+
+
+    flex-direction:column;
+
+
+    justify-content:center;
+
+
+    align-items:center;
+
+
+    font-size:32px;
+
+
+    font-weight:700;
+
+
+}
+
+
+
+.circle-number span {
+
+
+    font-size:14px;
+
+
+    font-weight:400;
+
+
+    color:#777;
+
+
+}
+
+
+
+
+
+
+/* ==========================
+ GATE
+========================== */
+
+
+.gate-image {
+
+
+    height:120px;
+
+
+    border-radius:20px;
+
+
+    background:#edf5f2;
+
+
+    display:flex;
+
+
+    align-items:center;
+
+
+    justify-content:center;
+
+
+    font-size:55px;
+
+
+    color:#3d947c;
+
+
+    margin-bottom:20px;
+
+
+}
+
+/* Gate safety status */
+
+
+/* Gate OPEN = danger */
+
+.gate-danger {
+
+    background:#ffe1e8;
+
+    color:#ef6680;
+
+}
+
+
+
+/* Gate CLOSED = safe */
+
+.gate-safe {
+
+    background:#dcf5e8;
+
+    color:#208c63;
+
+}
+
+.gate-image i {
+
+    transition:0.3s;
+
+}
+
+
+.gate-open-status {
+
+    background:#ffe1e8;
+
+    color:#ef6680;
+
+    padding:12px;
+
+    text-align:center;
+
+    border-radius:20px;
+
+    margin-bottom:15px;
+
+}
+
+
+
+
+.gate-close-status {
+
+    background:#dcf5e8;
+
+    color:#208c63;
+
+    padding:12px;
+
+    text-align:center;
+
+    border-radius:20px;
+
+    margin-bottom:15px;
+
+}
+
+
+
+
+.gate-open,
+.gate-close {
+
+
+    width:100%;
+
+
+    padding:12px;
+
+
+    border-radius:30px;
+
+
+    border:none;
+
+
+    margin-top:10px;
+
+
+    font-size:16px;
+
+
+}
+
+
+
+.gate-open {
+
+
+    background:#3d947c;
+
+
+    color:white;
+
+
+}
+
+
+
+.gate-close {
+
+
+    background:white;
+
+
+    border:1px solid #ddd;
+
+
+}
+
+
+
+
+
+
+/* ==========================
+ ACTIVITY
+========================== */
+
+
+.activity-item {
+
+
+    display:flex;
+
+
+    align-items:center;
+
+
+    gap:15px;
+
+
+    padding:15px 0;
+
+
+    border-bottom:
+
+    1px solid #eee;
+
+
+}
+
+
+
+.activity-icon {
+
+
+    width:45px;
+
+
+    height:45px;
+
+
+    border-radius:50%;
+
+
+    background:#dcf5ef;
+
+
+    display:flex;
+
+
+    justify-content:center;
+
+
+    align-items:center;
+
+
+    color:#208c63;
+
+
+}
+
+
+
+
+
+
+.active-label {
+
+
+    background:#dcf5e8;
+
+
+    color:#208c63;
+
+
+    padding:6px 15px;
+
+
+    border-radius:20px;
+
+
+    font-size:13px;
+
+
+}
+
+
+
+
+
+
+/* ==========================
+ BOOKING
+========================== */
+
+
+.booking-item {
+
+
+    display:flex;
+
+
+    align-items:center;
+
+
+    justify-content:space-between;
+
+
+    padding:15px 0;
+
+
+    border-bottom:
+
+    1px solid #eee;
+
+
+}
+
+
+
+
+.slot-badge {
+
+
+    background:#dcf5e8;
+
+
+    color:#208c63;
+
+
+    padding:12px;
+
+
+    border-radius:12px;
+
+
+}
+
+
+
+
+.booking-item p {
+
+
+    margin:5px 0;
+
+
+    color:#777;
+
+
+    font-size:13px;
+
+
+}
+
+
+
+
+
+
+/* ==========================
+ STATUS
+========================== */
+
+
 .status.online {
-color: #2f855a;
+
+
+    color:#208c63;
+
+
+    font-weight:600;
+
+
 }
 
 
-.muted {
-opacity: 0.65;
+
+
+
+/* ==========================
+ RESPONSIVE
+========================== */
+
+
+@media(max-width:1000px){
+
+
+    .dashboard-grid {
+
+
+        grid-template-columns:
+        repeat(2,1fr);
+
+    }
+
+
+
+    .dashboard-grid-2 {
+
+
+        grid-template-columns:1fr;
+
+    }
+
+
 }
 
 
-@keyframes floatIn {
-from {
-opacity: 0;
-transform: translateY(30px) scale(0.98);
-}
-to {
-opacity: 1;
-transform: translateY(0) scale(1);
-}
+
+
+@media(max-width:600px){
+
+
+    .layout {
+
+
+        flex-direction:column;
+
+    }
+
+
+    .sidebar {
+
+
+        width:100%;
+
+    }
+
+
+
+    .dashboard-grid {
+
+
+        grid-template-columns:1fr;
+
+    }
+
+
+    .parking-map {
+
+
+        grid-template-columns:
+        repeat(2,1fr);
+
+    }
+
+
 }
 
+.parking-layout{
+    display:flex;
+    align-items:center;
+    gap:25px;
+    background:#f3f4f4;
+    padding:30px;
+    border-radius:25px;
+}
+
+.gate-side{
+    width:80px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    color:#777;
+    font-weight:600;
+}
+
+.gate-side i{
+    font-size:35px;
+    margin-bottom:10px;
+}
+
+.parking-map{
+    flex:1;
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:25px;
+}
