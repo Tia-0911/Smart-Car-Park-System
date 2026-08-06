@@ -158,8 +158,115 @@ Today's booking
 
 
 
+<!-- =========================
+REVENUE CARDS
+========================= -->
 
 
+<div class="dashboard-grid-revenue">
+
+
+
+<div class="summary-card">
+
+<div class="icon-circle green">
+
+<i class="bi bi-currency-pound"></i>
+
+</div>
+
+
+<div>
+
+<p>
+Total Revenue
+</p>
+
+
+<h2>
+£{{ total_revenue }}
+</h2>
+
+
+<small>
+Income generated
+</small>
+
+
+</div>
+
+</div>
+
+
+
+
+
+<div class="summary-card">
+
+<div class="icon-circle green">
+
+<i class="bi bi-car-front-fill"></i>
+
+</div>
+
+
+<div>
+
+<p>
+Parking Revenue
+</p>
+
+
+<h2>
+£{{ parking_revenue }}
+</h2>
+
+
+<small>
+Parking payments
+</small>
+
+
+</div>
+
+</div>
+
+
+
+
+
+<div class="summary-card">
+
+<div class="icon-circle pink">
+
+<i class="bi bi-exclamation-triangle"></i>
+
+</div>
+
+
+<div>
+
+<p>
+Penalty Revenue
+</p>
+
+
+<h2>
+£{{ penalty_revenue }}
+</h2>
+
+
+<small>
+Overtime charges
+</small>
+
+
+</div>
+
+</div>
+
+
+</div>
 
 <!-- =========================
 SENSOR + SYSTEM STATUS
@@ -167,7 +274,6 @@ SENSOR + SYSTEM STATUS
 
 
 <div class="dashboard-grid-2">
-
 
 
 <!-- SENSOR STATUS -->
@@ -324,6 +430,11 @@ No sensor data
 
 </div>
 
+
+
+
+
+
 <!-- SYSTEM STATUS -->
 
 
@@ -446,8 +557,6 @@ Last Sync
 
 
 
-
-
 <!-- =========================
 PARKING MAP
 ========================= -->
@@ -501,9 +610,6 @@ Parking Lot Overview
 
 
 
-<!-- LEFT ENTRANCE -->
-
-
 <div class="gate-side entrance">
 
 
@@ -525,9 +631,6 @@ ENTRANCE
 
 
 
-<!-- PARKING SLOTS -->
-
-
 <div class="parking-map">
 
 
@@ -537,19 +640,7 @@ ENTRANCE
 
 
 
-<div class="parking-slot
-
-{% if slot.status == 'Occupied' %}
-
-occupied
-
-{% else %}
-
-available
-
-{% endif %}
-
-">
+<div class="parking-slot {% if slot.is_occupied %}occupied{% else %}available{% endif %}">
 
 
 
@@ -570,17 +661,13 @@ available
 <span>
 
 
-{% if slot.status == "Occupied" %}
-
+{% if slot.is_occupied %}
 
 Occupied
 
-
 {% else %}
 
-
 Available
-
 
 {% endif %}
 
@@ -609,9 +696,6 @@ Available
 
 
 
-<!-- RIGHT EXIT -->
-
-
 <div class="gate-side exit">
 
 
@@ -638,12 +722,17 @@ EXIT
 </div>
 
 <!-- =========================
-OCCUPANCY + GATE
+OCCUPANCY + OVERTIME + GATE
 ========================= -->
 
 
 <div class="dashboard-grid-2">
 
+
+
+<!-- LEFT COLUMN -->
+
+<div class="occupancy-wrapper">
 
 
 <!-- OCCUPANCY -->
@@ -660,7 +749,7 @@ Occupancy
 
 
 <div class="circle-chart"
-style="--percentage: {{ occupancy_percentage }}%;">
+style="--percentage:{{ occupancy_percentage }}%;">
 
 
 
@@ -705,12 +794,120 @@ Occupied
 
 
 
-
-
-<!-- GATE CONTROL -->
+<!-- OVERTIME PARKING -->
 
 
 <div class="modern-card">
+
+
+<h4>
+Overtime Parking
+</h4>
+
+
+
+
+{% for booking in overtime_bookings %}
+
+
+
+
+<div class="booking-item">
+
+
+
+<div class="slot-badge">
+
+{{ booking.parking_slot.slot_number }}
+
+</div>
+
+
+
+
+
+<div>
+
+
+<b>
+
+{{ booking.user.username }}
+
+</b>
+
+
+
+<p>
+
+Overtime:
+{{ booking.overtime_minutes }} minutes
+
+
+<br>
+
+
+Penalty:
+£20
+
+
+</p>
+
+
+</div>
+
+
+
+
+
+<span class="active-label">
+
+Overtime
+
+</span>
+
+
+
+
+</div>
+
+
+
+
+
+
+{% empty %}
+
+
+
+<p>
+No overtime parking
+</p>
+
+
+
+{% endfor %}
+
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+<!-- RIGHT COLUMN -->
+
+
+
+<div class="modern-card gate-card">
 
 
 <h4>
@@ -720,27 +917,32 @@ Gate Control
 
 
 
-{% for gate in gates %}
 
+<!-- Entrance Gate -->
+
+
+<h5>
+Entrance Gate
+</h5>
+
+
+
+{% if entrance_gate %}
 
 
 
 <div class="gate-image
 
-{% if gate.is_open %}
-
+{% if entrance_gate.is_open %}
 gate-danger
-
 {% else %}
-
 gate-safe
-
 {% endif %}
 
 ">
 
 
-{% if gate.is_open %}
+{% if entrance_gate.is_open %}
 
 <i class="bi bi-signpost-2-fill"></i>
 
@@ -757,36 +959,146 @@ gate-safe
 
 
 
-
-{% if gate.is_open %}
-
+{% if entrance_gate.is_open %}
 
 
 <div class="gate-open-status">
 
-
 ● Open
 
-
 </div>
-
-
 
 
 {% else %}
 
 
-
-
 <div class="gate-close-status">
 
-
 ● Closed
+
+</div>
+
+
+{% endif %}
+
+
+
+
+
+
+
+<button
+class="gate-open"
+onclick="openGate({{entrance_gate.id}}, {{latest_bookings.first.id}})"
+>
+
+
+<i class="bi bi-unlock"></i>
+
+Open Entrance
+
+
+</button>
+
+
+
+
+
+
+<button
+class="gate-close"
+onclick="closeGate({{entrance_gate.id}})"
+>
+
+
+<i class="bi bi-lock"></i>
+
+Close Entrance
+
+
+</button>
+
+
+
+
+{% endif %}
+
+
+
+
+
+
+
+<hr>
+
+
+
+
+
+
+
+<!-- Exit Gate -->
+
+
+<h5>
+Exit Gate
+</h5>
+
+
+
+
+{% if exit_gate %}
+
+
+
+<div class="gate-image
+
+{% if exit_gate.is_open %}
+gate-danger
+{% else %}
+gate-safe
+{% endif %}
+
+">
+
+
+{% if exit_gate.is_open %}
+
+<i class="bi bi-signpost-2-fill"></i>
+
+{% else %}
+
+<i class="bi bi-signpost-2"></i>
+
+{% endif %}
+
 
 
 </div>
 
 
+
+
+
+
+{% if exit_gate.is_open %}
+
+
+<div class="gate-open-status">
+
+● Open
+
+</div>
+
+
+{% else %}
+
+
+<div class="gate-close-status">
+
+● Closed
+
+</div>
 
 
 {% endif %}
@@ -801,21 +1113,17 @@ gate-safe
 
 class="gate-open"
 
-onclick="openGate({{gate.id}})"
+onclick="openExitGate({{exit_gate.id}}, {{latest_bookings.first.id}})"
 
 >
 
 
-
 <i class="bi bi-unlock"></i>
 
-
-Open Gate
-
+Open Exit
 
 
 </button>
-
 
 
 
@@ -826,17 +1134,14 @@ Open Gate
 
 class="gate-close"
 
-onclick="closeGate({{gate.id}})"
+onclick="closeGate({{exit_gate.id}})"
 
 >
 
 
-
 <i class="bi bi-lock"></i>
 
-
-Close Gate
-
+Close Exit
 
 
 </button>
@@ -844,8 +1149,7 @@ Close Gate
 
 
 
-
-{% endfor %}
+{% endif %}
 
 
 
@@ -1155,102 +1459,266 @@ No booking available
 
 <script>
 
-function openGate(id){
+
+function openGate(id, bookingId){
+
+
+console.log("Gate ID:", id);
+console.log("Booking ID:", bookingId);
+
+
 
 fetch(`/api/gates/${id}/open/`, {
-    method: "POST",
+
+
+    method:"POST",
+
+
     headers:{
-        "X-CSRFToken": getCookie("csrftoken")
-    }
+
+
+        "Content-Type":"application/json",
+
+        "X-CSRFToken":getCookie("csrftoken")
+
+
+    },
+
+
+    body:JSON.stringify({
+
+
+        booking_id:bookingId
+
+
+    })
+
+
 })
+
 
 .then(response => response.json())
 
+
 .then(data => {
 
-console.log(data);
 
-location.reload();
+    console.log(data);
+
+
+    location.reload();
+
 
 })
 
+
 .catch(error => {
 
-console.log(error);
 
-alert("Error opening gate");
+    console.log(error);
+
+
+    alert("Error opening gate");
+
 
 });
 
+
 }
+
+
+
+
+
+
+function openExitGate(id, bookingId){
+
+
+
+fetch(`/api/gates/${id}/exit-open/`, {
+
+
+    method:"POST",
+
+
+    headers:{
+
+
+        "Content-Type":"application/json",
+
+        "X-CSRFToken":getCookie("csrftoken")
+
+
+    },
+
+
+    body:JSON.stringify({
+
+
+        booking_id:bookingId
+
+
+    })
+
+
+})
+
+
+.then(response => response.json())
+
+
+.then(data => {
+
+
+    console.log(data);
+
+
+    location.reload();
+
+
+})
+
+
+.catch(error => {
+
+
+    console.log(error);
+
+
+    alert("Error opening exit gate");
+
+
+});
+
+
+}
+
+
+
+
 
 
 
 
 function closeGate(id){
 
+
+
 fetch(`/api/gates/${id}/close/`, {
-    method: "POST",
+
+
+    method:"POST",
+
+
     headers:{
-        "X-CSRFToken": getCookie("csrftoken")
+
+
+        "X-CSRFToken":getCookie("csrftoken")
+
+
     }
+
+
 })
+
 
 .then(response => response.json())
 
+
 .then(data => {
 
-console.log(data);
 
-location.reload();
+    console.log(data);
+
+
+    location.reload();
+
 
 })
 
+
 .catch(error => {
 
-console.log(error);
 
-alert("Error closing gate");
+    console.log(error);
+
+
+    alert("Error closing gate");
+
 
 });
 
+
 }
+
+
+
+
+
 
 
 
 
 function getCookie(name){
 
+
 let cookieValue = null;
+
+
 
 if(document.cookie){
 
+
+
 let cookies = document.cookie.split(';');
+
+
 
 for(let i=0;i<cookies.length;i++){
 
+
+
 let cookie = cookies[i].trim();
 
-if(cookie.substring(0,name.length+1) === (name+'=')){
+
+
+if(cookie.substring(0,name.length+1)===(name+'=')){
+
+
 
 cookieValue = decodeURIComponent(
+
 cookie.substring(name.length+1)
+
 );
+
+
 
 break;
 
-}
+
 
 }
 
+
 }
+
+
+}
+
+
 
 return cookieValue;
 
+
+
 }
 
 
+
 </script>
+
+
 
 
 
