@@ -2,12 +2,12 @@ from rest_framework import serializers
 
 from .models import (
     ParkingSlot,
-    Booking,
-    Gate,
     SensorData,
+    Booking,
     Wallet,
     Transaction,
-    Emergency
+    Emergency,
+    Gate,
 )
 
 
@@ -19,36 +19,10 @@ from .models import (
 class ParkingSlotSerializer(serializers.ModelSerializer):
 
     class Meta:
+
         model = ParkingSlot
-        fields = '__all__'
 
-
-
-
-
-# ==========================
-# Booking Serializer
-# ==========================
-
-class BookingSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = Booking
-        fields = '__all__'
-
-
-
-
-
-# ==========================
-# Gate Serializer
-# ==========================
-
-class GateSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = Gate
-        fields = '__all__'
+        fields = "__all__"
 
 
 
@@ -61,8 +35,28 @@ class GateSerializer(serializers.ModelSerializer):
 class SensorDataSerializer(serializers.ModelSerializer):
 
     class Meta:
+
         model = SensorData
-        fields = '__all__'
+
+        fields = "__all__"
+
+
+
+
+
+
+# ==========================
+# Booking Serializer
+# ==========================
+
+class BookingSerializer(serializers.ModelSerializer):
+
+    class Meta:
+
+        model = Booking
+
+        fields = "__all__"
+
 
 
 
@@ -75,8 +69,11 @@ class SensorDataSerializer(serializers.ModelSerializer):
 class WalletSerializer(serializers.ModelSerializer):
 
     class Meta:
+
         model = Wallet
-        fields = '__all__'
+
+        fields = "__all__"
+
 
 
 
@@ -89,8 +86,11 @@ class WalletSerializer(serializers.ModelSerializer):
 class TransactionSerializer(serializers.ModelSerializer):
 
     class Meta:
+
         model = Transaction
-        fields = '__all__'
+
+        fields = "__all__"
+
 
 
 
@@ -103,5 +103,24 @@ class TransactionSerializer(serializers.ModelSerializer):
 class EmergencySerializer(serializers.ModelSerializer):
 
     class Meta:
+
         model = Emergency
-        fields = '__all__'
+
+        fields = "__all__"
+
+
+
+
+
+
+# ==========================
+# Gate Serializer
+# ==========================
+
+class GateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+
+        model = Gate
+
+        fields = "__all__"

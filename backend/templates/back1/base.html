@@ -1,254 +1,112 @@
 {% load static %}
 
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
 
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Smart Car Park Dashboard</title>
 
 
-<!-- Bootstrap -->
-<link 
-href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" 
-rel="stylesheet">
+    <!-- Bootstrap -->
+    <link 
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" 
+    rel="stylesheet">
 
 
-<!-- Icons -->
-<link 
-rel="stylesheet"
-href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <!-- Bootstrap Icons -->
+    <link 
+    rel="stylesheet" 
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 
 
-<!-- Dashboard CSS -->
-<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
-
-
-<title>Smart Car Park</title>
+    <!-- Dashboard CSS -->
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=5">
 
 
 </head>
 
 
-
 <body>
-
-
-<div class="layout">
-
-
-
-<!-- =====================
-SIDEBAR
-===================== -->
-
-
-<aside class="sidebar">
-
-
-<div class="logo">
-
-<i class="bi bi-car-front-fill"></i>
-
-<div>
-<h4>Smart</h4>
-<h4>Car Park</h4>
-</div>
-
-</div>
-
-
-
-<hr>
-
-
-
-<nav>
-
-
-<a href="/" class="active">
-
-<i class="bi bi-grid"></i>
-
-Dashboard
-
-</a>
-
-
-
-<a href="#">
-
-<i class="bi bi-p-square"></i>
-
-Parking Slots
-
-</a>
-
-
-
-<a href="/bookings/">
-
-<i class="bi bi-calendar-check"></i>
-
-Bookings
-
-</a>
-
-
-
-
-<a href="#">
-
-<i class="bi bi-broadcast"></i>
-
-Sensors
-
-</a>
-
-
-
-
-<a href="#">
-
-<i class="bi bi-signpost-2"></i>
-
-Gate Control
-
-</a>
-
-
-
-
-<a href="#">
-
-<i class="bi bi-bar-chart"></i>
-
-Reports
-
-</a>
-
-
-
-<a href="#">
-
-<i class="bi bi-people"></i>
-
-Users
-
-</a>
-
-
-
-
-<a href="#">
-
-<i class="bi bi-gear"></i>
-
-Settings
-
-</a>
-
-
-
-</nav>
-
-
-
-<div class="profile">
-
-
-<i class="bi bi-person-circle"></i>
-
-
-<div>
-
-<b>Admin</b>
-
-<br>
-
-<small>
-Administrator
-</small>
-
-</div>
-
-
-</div>
-
-
-
-</aside>
-
-
-
-
-
-
-<!-- =====================
-MAIN CONTENT
-===================== -->
-
 
 <main class="main-content">
 
-
-<div class="topbar">
-
-
-<div>
-
-<h1>
-Dashboard
-</h1>
+<div class="dashboard-header">
 
 
-<p>
-Real-time overview of your parking system
-</p>
+    <!-- HERO IMAGE -->
+
+    <div class="hero-section">
+
+        <img 
+        src="{% static 'images/parking-logo.png' %}"
+        alt="Smart Car Park"
+        class="parking-banner">
+
+    </div>
+
+
+
+    <!-- HEADER RIGHT -->
+
+    <div class="header-right">
+
+
+        <div class="system-status">
+
+            <span class="status-dot"></span>
+
+            System Online
+
+        </div>
+
+
+
+        <div class="update-time">
+
+
+            <i class="bi bi-clock"></i>
+
+
+            <div>
+
+                <small>
+                    Last Sync
+                </small>
+
+
+                <strong>
+                    02:15 AM
+                    <br>
+                    07 Aug 2026
+                </strong>
+
+
+            </div>
+
+
+        </div>
+
+
+    </div>
+
 
 </div>
 
 
 
-<div class="system-status">
-
-<span>
-●
-</span>
-
-All systems operational
-
-</div>
-
-
-</div>
-
-
-
+<!-- PAGE CONTENT -->
 
 
 {% block content %}
 
 {% endblock %}
 
-
-
 </main>
-
-
-
-
-</div>
-
-
-
-
-
-<script 
-src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js">
-</script>
-
 
 
 </body>

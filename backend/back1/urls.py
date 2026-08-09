@@ -2,7 +2,7 @@ from django.urls import path
 from . import views
 
 
-app_name = 'back1'
+app_name = "back1"
 
 
 urlpatterns = [
@@ -12,11 +12,10 @@ urlpatterns = [
     # ==========================
 
     path(
-        '',
+        "",
         views.dashboard,
-        name='dashboard'
+        name="dashboard"
     ),
-
 
 
     # ==========================
@@ -24,26 +23,24 @@ urlpatterns = [
     # ==========================
 
     path(
-        'api/dashboard/sensor-status/',
+        "api/dashboard/sensor-status/",
         views.dashboard_sensor_status,
-        name='dashboard_sensor_status'
+        name="dashboard_sensor_status"
     ),
 
 
     path(
-        'api/dashboard/environment/',
-        views.dashboard_environment,
-        name='dashboard_environment'
+        "api/dashboard/environment/",
+        views.latest_sensor,
+        name="dashboard_environment"
     ),
 
 
     path(
-        'api/dashboard/emergency/',
-        views.dashboard_emergency,
-        name='dashboard_emergency'
+        "api/dashboard/emergency/",
+        views.emergency_status,
+        name="dashboard_emergency"
     ),
-
-
 
 
 
@@ -52,61 +49,43 @@ urlpatterns = [
     # ==========================
 
     path(
-        'api/sensors/latest/',
-        views.latest_reading,
-        name='latest_reading'
+        "api/sensors/latest/",
+        views.latest_sensor,
+        name="latest_sensor"
     ),
 
 
     path(
-        'api/sensors/history/',
-        views.readings_history,
-        name='readings_history'
+        "api/sensors/history/",
+        views.sensor_history,
+        name="sensor_history"
     ),
 
 
     path(
-        'api/sensors/update/',
-        views.sensor_update,
-        name='sensor_update'
+        "api/sensors/update/",
+        views.update_sensor,
+        name="update_sensor"
     ),
 
 
     path(
-        'api/sensors/fire-check/',
+        "api/sensors/fire-check/",
         views.fire_sensor_check,
-        name='fire_sensor_check'
+        name="fire_sensor_check"
     ),
 
 
 
-
-
     # ==========================
-    # Parking API
+    # Parking Slot API
     # ==========================
 
     path(
-        'api/parking-slots/',
-        views.parking_slots_api,
-        name='parking_slots_api'
+        "api/parking-slots/",
+        views.parking_slots,
+        name="parking_slots"
     ),
-
-
-
-
-
-    # ==========================
-    # Availability API
-    # ==========================
-
-    path(
-        'api/availability/',
-        views.check_availability,
-        name='check_availability'
-    ),
-
-
 
 
 
@@ -115,40 +94,38 @@ urlpatterns = [
     # ==========================
 
     path(
-        'api/bookings/',
-        views.bookings_api,
-        name='bookings_api'
+        "api/bookings/",
+        views.booking_list,
+        name="booking_list"
     ),
 
 
     path(
-        'api/bookings/create/',
+        "api/bookings/create/",
         views.create_booking,
-        name='create_booking'
+        name="create_booking"
     ),
 
 
     path(
-        'api/bookings/<int:booking_id>/cancel/',
+        "api/bookings/<int:booking_id>/cancel/",
         views.cancel_booking,
-        name='cancel_booking'
+        name="cancel_booking"
     ),
 
 
     path(
-        'api/bookings/<int:booking_id>/entry/',
+        "api/bookings/<int:booking_id>/entry/",
         views.car_entry,
-        name='car_entry'
+        name="car_entry"
     ),
 
 
     path(
-        'api/bookings/<int:booking_id>/exit/',
+        "api/bookings/<int:booking_id>/exit/",
         views.car_exit,
-        name='car_exit'
+        name="car_exit"
     ),
-
-
 
 
 
@@ -157,33 +134,36 @@ urlpatterns = [
     # ==========================
 
     path(
-        'api/gates/',
+        "api/gates/",
         views.gates_api,
-        name='gates_api'
+        name="gates_api"
     ),
 
 
     path(
-        'api/gates/<int:gate_id>/open/',
+        "api/gates/<int:gate_id>/open/",
         views.open_gate,
-        name='open_gate'
+        name="open_gate"
     ),
 
 
     path(
-        'api/gates/<int:gate_id>/close/',
+        "api/gates/<int:gate_id>/close/",
         views.close_gate,
-        name='close_gate'
+        name="close_gate"
     ),
 
+
+
+    # ==========================
+    # Revenue API
+    # ==========================
 
     path(
-        'api/gates/<int:gate_id>/exit-open/',
-        views.open_exit_gate,
-        name='open_exit_gate'
+        "api/revenue/",
+        views.revenue_summary,
+        name="revenue_summary"
     ),
-
-
 
 
 
@@ -192,19 +172,17 @@ urlpatterns = [
     # ==========================
 
     path(
-        'api/wallet/<int:user_id>/',
+        "api/wallet/<int:user_id>/",
         views.wallet_detail,
-        name='wallet_detail'
+        name="wallet_detail"
     ),
 
 
     path(
-        'api/wallet/<int:user_id>/add/',
+        "api/wallet/<int:user_id>/add/",
         views.add_wallet_balance,
-        name='add_wallet_balance'
+        name="add_wallet_balance"
     ),
-
-
 
 
 
@@ -213,12 +191,10 @@ urlpatterns = [
     # ==========================
 
     path(
-        'api/transactions/<int:user_id>/',
+        "api/transactions/<int:user_id>/",
         views.transaction_history,
-        name='transaction_history'
+        name="transaction_history"
     ),
-
-
 
 
 
@@ -227,26 +203,24 @@ urlpatterns = [
     # ==========================
 
     path(
-        'api/emergency/',
+        "api/emergency/",
         views.emergency_list,
-        name='emergency_list'
+        name="emergency_list"
     ),
 
 
     path(
-        'api/emergency/create/',
+        "api/emergency/create/",
         views.create_emergency,
-        name='create_emergency'
+        name="create_emergency"
     ),
 
 
     path(
-        'api/emergency/<int:emergency_id>/resolve/',
+        "api/emergency/<int:emergency_id>/resolve/",
         views.resolve_emergency,
-        name='resolve_emergency'
+        name="resolve_emergency"
     ),
-
-
 
 
 
@@ -255,16 +229,16 @@ urlpatterns = [
     # ==========================
 
     path(
-        'bookings/',
+        "bookings/",
         views.BookingListView.as_view(),
-        name='bookings'
+        name="bookings"
     ),
 
 
     path(
-        'bookings/new/',
+        "bookings/new/",
         views.BookingCreateView.as_view(),
-        name='booking-create'
+        name="booking-create"
     ),
 
 ]

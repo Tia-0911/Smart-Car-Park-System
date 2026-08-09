@@ -4,141 +4,111 @@
 {% block content %}
 
 
-<!-- =========================
-DASHBOARD HEADER
-========================= -->
-
-<div class="dashboard-header">
-
-    <div>
-        <h1>
-            Smart Car Park Dashboard
-        </h1>
-
-        <p>
-            Real-time monitoring system
-        </p>
-    </div>
+<!-- ================= SUMMARY CARDS ================= -->
 
 
-    <div class="system-indicator">
-
-        <span class="online-dot"></span>
-
-        All systems operational
-
-    </div>
+<div class="dashboard-summary">
 
 
-</div>
+    <!-- TOTAL SLOTS -->
+
+    <div class="summary-card modern-card">
 
 
+        <div class="summary-icon">
+
+            🅿️
+
+        </div>
 
 
-
-<!-- =========================
-SUMMARY CARDS
-========================= -->
+        <div class="summary-content">
 
 
-<div class="dashboard-grid">
+            <small>
+                Total Slots
+            </small>
 
 
-
-<!-- TOTAL SLOTS -->
-
-<div class="summary-card">
-
-    <div class="icon-circle green">
-
-        <i class="bi bi-p-square-fill"></i>
-
-    </div>
+            <h2>
+                {{ total_slots|default:6 }}
+            </h2>
 
 
-    <div>
-
-        <p>
-            Total Slots
-        </p>
+            <p>
+                Parking capacity
+            </p>
 
 
-        <h2>
-            {{ total_slots }}
-        </h2>
-
-
-        <small>
-            All parking slots
-        </small>
+        </div>
 
 
     </div>
 
 
-</div>
+
+
+
+    <!-- AVAILABLE -->
+
+
+    <div class="summary-card modern-card">
+
+
+        <div class="summary-icon green">
+
+            🚗
+
+        </div>
+
+
+
+        <div class="summary-content">
+
+
+            <small>
+                Available
+            </small>
+
+
+
+            <h2 class="green-text">
+
+                {{ available_slots|default:3 }}
+
+            </h2>
+
+
+
+            <p>
+                Free spaces
+            </p>
 
 
 
 
+            <div class="mini-progress">
+
+
+                <div class="available-progress">
+
+                </div>
+
+
+            </div>
 
 
 
-<!-- AVAILABLE -->
+            <span class="percentage-text">
 
+                50% Available
 
-<div class="summary-card">
-
-
-    <div class="icon-circle mint">
-
-        <i class="bi bi-car-front-fill"></i>
-
-    </div>
-
-
-
-    <div>
-
-
-        <p>
-            Available
-        </p>
-
-
-        <h2 class="green-text">
-
-            {{ available_slots }}
-
-        </h2>
-
-
-        <small>
-            Available spaces
-        </small>
-
-
-    </div>
-
-
-</div>
+            </span>
 
 
 
 
-
-
-
-<!-- OCCUPIED -->
-
-
-<div class="summary-card">
-
-
-    <div class="icon-circle pink">
-
-
-        <i class="bi bi-car-front"></i>
+        </div>
 
 
     </div>
@@ -146,275 +116,189 @@ SUMMARY CARDS
 
 
 
-    <div>
-
-
-        <p>
-            Occupied
-        </p>
-
-
-
-        <h2 class="pink-text">
-
-            {{ occupied_slots }}
-
-        </h2>
-
-
-
-        <small>
-            Currently occupied
-        </small>
-
-
-    </div>
-
-
-</div>
 
 
 
 
+    <!-- OCCUPIED -->
+
+
+    <div class="summary-card modern-card">
+
+
+        <div class="summary-icon red">
+
+            🚘
+
+        </div>
 
 
 
-
-<!-- ACTIVE BOOKINGS -->
-
-
-<div class="summary-card">
+        <div class="summary-content">
 
 
-    <div class="icon-circle purple">
-
-
-        <i class="bi bi-calendar-check"></i>
-
-
-    </div>
+            <small>
+                Occupied
+            </small>
 
 
 
+            <h2 class="red-text">
 
-    <div>
+                {{ occupied_slots|default:3 }}
 
-
-        <p>
-            Active Bookings
-        </p>
+            </h2>
 
 
 
-        <h2>
-
-            {{ bookings.count }}
-
-        </h2>
+            <p>
+                Currently used
+            </p>
 
 
 
-        <small>
-            Today's booking
-        </small>
+            <div class="mini-progress">
+
+
+                <div class="occupied-progress">
+
+                </div>
+
+
+            </div>
+
+
+
+            <span class="percentage-text">
+
+                50% Occupied
+
+            </span>
+
+
+
+        </div>
 
 
     </div>
 
 
 
-</div>
 
 
 
-</div>
 
 
+    <!-- BOOKINGS -->
 
 
+    <div class="summary-card modern-card">
 
 
+        <div class="summary-icon purple">
 
-<!-- =========================
-REVENUE CARDS
-========================= -->
+            📅
 
+        </div>
 
-<div class="dashboard-grid-revenue">
 
 
+        <div class="summary-content">
 
-<div class="summary-card">
 
+            <small>
+                Active Bookings
+            </small>
 
-<div class="icon-circle green">
 
-<i class="bi bi-currency-pound"></i>
 
-</div>
+            <h2>
 
+                {{ booking_count|default:5 }}
 
+            </h2>
 
-<div>
 
-<p>
-Total Revenue
-</p>
 
+            <p>
+                Today's reservations
+            </p>
 
 
-<h2>
 
-£{{ total_revenue }}
+            <span class="live-status">
 
-</h2>
+                ● Live booking
 
+            </span>
 
 
-<small>
-Income generated
-</small>
 
-
-</div>
-
-
-</div>
-
-
-
-
-
-
-
-<div class="summary-card">
-
-
-<div class="icon-circle green">
-
-<i class="bi bi-car-front-fill"></i>
-
-</div>
-
-
-
-<div>
-
-
-<p>
-Parking Revenue
-</p>
-
-
-
-<h2>
-
-£{{ parking_revenue }}
-
-</h2>
-
-
-
-
-<small>
-Parking payments
-</small>
-
-
-</div>
-
-
-</div>
-
-
-
-
-
-
-
-<div class="summary-card">
-
-
-<div class="icon-circle pink">
-
-<i class="bi bi-exclamation-triangle"></i>
-
-</div>
-
-
-
-<div>
-
-
-<p>
-Penalty Revenue
-</p>
-
-
-
-<h2>
-
-£{{ penalty_revenue }}
-
-</h2>
-
-
-
-<small>
-Overtime charges
-</small>
-
-
-</div>
-
-
-</div>
-
-
-
-</div>
-<!-- =========================
-EMERGENCY ALERT
-========================= -->
-
-
-<div class="monitor-card emergency-card">
-
-
-    <div class="card-header">
-
-
-        <h3>
-            🚨 Emergency Alert
-        </h3>
-
-
-        <span class="status safe">
-            ● Normal
-        </span>
+        </div>
 
 
     </div>
 
 
 
-    <div class="emergency-content">
+</div>
 
 
-        <i class="bi bi-shield-check emergency-icon"></i>
+
+
+
+
+
+
+
+
+<!-- ================= REVENUE ================= -->
+
+
+<div class="revenue-grid">
+
+
+
+    <!-- TOTAL REVENUE -->
+
+
+    <div class="revenue-card modern-card total-revenue">
+
+
+        <div class="revenue-icon">
+
+            💰
+
+        </div>
 
 
 
         <div>
 
-            <h4>
-                No active emergency
-            </h4>
+
+            <small>
+                Total Revenue
+            </small>
+
+
+
+            <h2>
+                £{{ total_revenue }}
+            </h2>
+
 
 
             <p>
-                Temperature, humidity and fire sensors are operating normally.
+                Total income
             </p>
+
+
+
+            <span class="revenue-up">
+
+                ↑ 12% today
+
+            </span>
 
 
         </div>
@@ -424,906 +308,389 @@ EMERGENCY ALERT
     </div>
 
 
-</div>
-
-
-
-
-
-
-
-<!-- =========================
-ENVIRONMENTAL MONITORING
-========================= -->
-
-
-<div class="monitor-card">
-
-
-<div class="card-header">
-
-
-<h3>
-Environmental Monitoring
-</h3>
-
-
-</div>
-
-
-
-
-
-<div class="sensor-summary-grid">
-
-
-
-
-
-
-
-<!-- TEMPERATURE -->
-
-
-<div class="sensor-box">
-
-
-<div class="sensor-icon temperature">
-
-<i class="bi bi-thermometer-half"></i>
-
-</div>
-
-
-
-<div>
-
-
-<h4>
-Temperature
-</h4>
-
-
-<h2>
-
-{% if latest %}
-
-{{ latest.temperature }}°C
-
-{% else %}
-
-28°C
-
-{% endif %}
-
-
-</h2>
-
-
-
-<span class="normal-status">
-
-Normal
-
-</span>
-
-
-
-</div>
-
-
-</div>
-
-
-
-
-
-
-
-
-
-<!-- HUMIDITY -->
-
-
-<div class="sensor-box">
-
-
-<div class="sensor-icon humidity">
-
-
-<i class="bi bi-droplet-fill"></i>
-
-
-</div>
-
-
-
-
-<div>
-
-
-<h4>
-Humidity
-</h4>
-
-
-
-<h2>
-
-
-{% if latest %}
-
-{{ latest.humidity }}%
-
-{% else %}
-
-60%
-
-{% endif %}
-
-
-
-</h2>
-
-
-
-<span class="normal-status">
-
-Normal
-
-</span>
-
-
-
-</div>
-
-
-</div>
-
-
-
-
-
-
-
-
-
-<!-- FIRE -->
-
-
-<div class="sensor-box">
-
-
-<div class="sensor-icon fire">
-
-
-<i class="bi bi-fire"></i>
-
-
-</div>
-
-
-
-
-
-<div>
-
-
-<h4>
-Fire Detection
-</h4>
-
-
-
-
-<h2>
-
-
-No Fire
-
-
-</h2>
-
-
-
-
-<span class="safe-status">
-
-Safe
-
-</span>
-
-
-
-</div>
-
-
-</div>
-
-
-
-
-
-</div>
-
-
-</div>
-
-
-
-
-
-
-
-
-
-
-<!-- =========================
-SENSOR STATUS
-========================= -->
-
-
-<div class="monitor-card">
-
-
-<div class="card-header">
-
-
-<h3>
-Sensor Status
-</h3>
-
-
-
-<span class="status online">
-
-● Online
-
-</span>
-
-
-</div>
-
-
-
-
-
-
-<div class="sensor-table">
-
-
-
-<table>
-
-
-<thead>
-
-
-<tr>
-
-<th>
-Sensor ID
-</th>
-
-
-<th>
-Type
-</th>
-
-
-<th>
-Location
-</th>
-
-
-<th>
-Status
-</th>
-
-
-<th>
-Last Update
-</th>
-
-
-</tr>
-
-
-</thead>
-
-
-
-
-
-<tbody>
-
-
-
-{% if sensors %}
-
-
-{% for sensor in sensors %}
-
-
-
-<tr>
-
-
-<td>
-
-{{ sensor.sensor_id }}
-
-</td>
-
-
-
-<td>
-
-{{ sensor.sensor_type }}
-
-</td>
-
-
-
-<td>
-
-{% if sensor.parking_slot %}
-
-{{ sensor.parking_slot.slot_number }}
-
-{% else %}
-
-Parking Area
-
-{% endif %}
-
-
-</td>
-
-
-
-
-<td>
-
-
-<span class="status online">
-
-● Online
-
-</span>
-
 
-</td>
 
 
 
 
-<td>
 
-{{ sensor.created_at }}
 
-</td>
+    <!-- PARKING REVENUE -->
 
 
+    <div class="revenue-card modern-card parking-revenue">
 
 
-</tr>
+        <div class="revenue-icon green">
 
+            🅿️
 
+        </div>
 
-{% endfor %}
 
 
 
-{% else %}
+        <div>
 
 
+            <small>
+                Parking Revenue
+            </small>
 
-<tr>
 
 
-<td colspan="5">
+            <h2 class="green-text">
+                £{{ parking_revenue }}
+            </h2>
 
-No sensor data available
 
-</td>
 
+            <p>
+                Parking payment
+            </p>
 
-</tr>
 
 
+            <span class="revenue-up">
 
-{% endif %}
+                Active payment
 
+            </span>
 
 
 
-</tbody>
+        </div>
 
 
 
-</table>
+    </div>
 
 
 
-</div>
-
-
-
-</div>
-
-<!-- =========================
-SYSTEM STATUS
-========================= -->
-
-
-<div class="dashboard-two-column">
-
-
-
-<div class="monitor-card">
-
-
-<div class="card-header">
-
-
-<h3>
-System Status
-</h3>
-
-
-
-</div>
-
-
-
-
-
-
-<div class="system-status-list">
-
-
-
-
-
-<div class="system-item">
-
-
-<div>
-
-<i class="bi bi-server"></i>
-
-
-<span>
-Backend API
-</span>
-
-
-</div>
-
-
-
-<span class="status online">
-
-Online ●
-
-</span>
-
-
-</div>
-
-
-
-
-
-
-
-
-<div class="system-item">
-
-
-<div>
-
-<i class="bi bi-database"></i>
-
-
-<span>
-Database
-</span>
-
-
-</div>
-
-
 
-<span class="status online">
 
-Connected ●
 
-</span>
 
 
-</div>
-
-
-
-
-
-
-
-
-<div class="system-item">
-
-
-<div>
-
-<i class="bi bi-cloud"></i>
-
-
-<span>
-Cloud Server
-</span>
-
-
-</div>
-
-
-
-<span class="status online">
-
-Running ●
-
-</span>
-
-
-</div>
-
-
-
-
-
-
-
 
-<div class="system-item">
+    <!-- PENALTY REVENUE -->
 
 
-<div>
+    <div class="revenue-card modern-card penalty-revenue">
 
-<i class="bi bi-broadcast"></i>
 
+        <div class="revenue-icon red">
 
-<span>
-IoT Connection
-</span>
+            ⚠️
 
+        </div>
 
-</div>
-
-
-
-<span class="status online">
-
-Connected ●
-
-</span>
-
-
-</div>
-
-
-
 
 
+        <div>
 
 
+            <small>
+                Penalty Revenue
+            </small>
 
-<div class="system-item">
 
 
-<div>
+            <h2 class="red-text">
+                £{{ penalty_revenue }}
+            </h2>
 
-<i class="bi bi-clock"></i>
 
-
-<span>
-Last Data Sync
-</span>
-
-
-</div>
 
+            <p>
+                Overtime charges
+            </p>
 
 
-<span>
 
-10 seconds ago
+            <span class="revenue-warning">
 
-</span>
+                2 penalties
 
+            </span>
 
-</div>
 
 
+        </div>
 
 
 
+    </div>
 
-</div>
 
 
 
 </div>
-
-
-
-
-
-
 
+<!-- ================= PARKING LOT OVERVIEW ================= -->
 
 
-<!-- =========================
-PARKING MAP
-========================= -->
+<div class="dashboard-card parking-map-card modern-card">
 
 
-<div class="monitor-card parking-map-card">
+    <div class="section-header">
 
 
-<div class="card-header">
+        <h3>
+            🅿️ Parking Lot Overview
+        </h3>
 
 
-<h3>
 
-Parking Map
+        <div class="parking-legend">
 
-</h3>
 
+            <span class="legend available-dot">
 
+                Available
 
-<span class="status online">
+            </span>
 
-Real-time
 
-</span>
+            <span class="legend occupied-dot">
 
+                Occupied
 
+            </span>
 
-</div>
-
-
-
 
+        </div>
 
 
+    </div>
 
-<div class="parking-grid">
 
 
 
 
 
-{% if slots %}
+    <div class="parking-real-layout">
 
 
 
-{% for slot in slots %}
 
 
+        <!-- Entrance -->
 
-<div class="parking-slot 
-{% if slot.status == 'Occupied' %}
-occupied
-{% else %}
-available
-{% endif %}
-">
 
+        <div class="parking-gate">
 
 
-<i class="bi bi-car-front-fill"></i>
+            <div class="gate-icon">
 
+                🚪
 
+            </div>
 
-<h4>
 
-{{ slot.slot_number }}
+            <span>
+                Entrance
+            </span>
 
-</h4>
 
+        </div>
 
 
-{% if slot.status == 'Occupied' %}
 
 
-<span>
 
-Occupied
 
-</span>
 
 
-{% else %}
 
+        <!-- Parking Slots -->
 
-<span>
 
-Available
+        <div class="parking-slots-real">
 
-</span>
 
+        {% for slot in parking_slots %}
 
-{% endif %}
+        <div class="real-slot 
+        {% if slot.status == 'occupied' %}
+        occupied
+        {% else %}
+        available
+        {% endif %}
+        ">
 
 
+        <strong>
+        {{ slot.slot_number }}
+        </strong>
 
-</div>
 
+        🚗
 
 
-{% endfor %}
+        <span>
+        {{ slot.status|title }}
+        </span>
 
 
+        </div>
 
-{% else %}
 
+        {% endfor %}
 
 
+        </div>
 
 
-<div class="parking-slot available">
 
-<i class="bi bi-car-front"></i>
 
-<h4>
-A01
-</h4>
 
-<span>
-Available
-</span>
+            
+        <!-- Exit -->
 
-</div>
 
+        <div class="parking-gate">
 
 
+            <div class="gate-icon">
 
+                🚪
 
-<div class="parking-slot occupied">
+            </div>
 
-<i class="bi bi-car-front-fill"></i>
 
-<h4>
-A02
-</h4>
+            <span>
+                Exit
+            </span>
 
-<span>
-Occupied
-</span>
 
-</div>
+        </div>
 
 
 
 
 
-<div class="parking-slot available">
+    </div>
 
-<i class="bi bi-car-front"></i>
 
-<h4>
-A03
-</h4>
 
-<span>
-Available
-</span>
 
 </div>
-
 
 
 
+<!-- ================= GATE CONTROL ================= -->
 
-{% endif %}
 
 
+<div class="dashboard-card gate-control modern-card">
 
 
-</div>
-
-
-
-
-
-</div>
-
 
+    <div class="section-header">
 
-</div>
 
-<!-- =========================
-OCCUPANCY + OVERTIME + GATE
-========================= -->
+        <h3>
+            🚧 Gate Control
+        </h3>
 
 
-<div class="dashboard-two-column">
+        <span class="live-status">
 
+            ● Live Control
 
+        </span>
 
 
+    </div>
 
-<!-- =========================
-OCCUPANCY
-========================= -->
 
 
-<div class="monitor-card">
 
 
-<div class="card-header">
 
+    <div class="gate-control-grid">
 
-<h3>
-Occupancy
-</h3>
 
 
-</div>
 
 
+        <!-- Entrance Gate -->
 
 
+        <div class="gate-box">
 
-<div class="occupancy-container">
 
 
-<div class="circle-chart"
-style="--percentage:{{ occupancy_percentage }}%;">
+            <h4>
+                Entrance Gate
+            </h4>
 
 
 
-<div class="circle-number">
 
+            {% if entrance_gate and entrance_gate.is_open %}
 
-{{ occupancy_percentage }}%
+            <div class="gate-image gate-image-open">
+                <i class="bi bi-door-open-fill" aria-hidden="true"></i>
+                <span>Gate Open</span>
+            </div>
 
+            <div class="gate-status open">
 
-<span>
-Occupied
-</span>
+                <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+                Open — Caution
 
+            </div>
 
-</div>
+            {% else %}
 
+            <div class="gate-image gate-image-closed">
+                <i class="bi bi-door-closed-fill" aria-hidden="true"></i>
+                <span>Gate Closed</span>
+            </div>
 
+            <div class="gate-status closed">
 
-</div>
+                <i class="bi bi-shield-check" aria-hidden="true"></i>
+                Closed — Safe
 
+            </div>
 
+            {% endif %}
 
 
-<p>
 
-{{ occupied_slots }}
 
-/
 
-{{ total_slots }}
 
-slots occupied
+            <div class="gate-buttons">
 
-</p>
+                {% if entrance_gate %}
+                <form class="gate-action-form" method="post" action="{% url 'back1:open_gate' entrance_gate.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="open-gate-btn" {% if entrance_gate.is_open %}disabled{% endif %}>
+                        OPEN GATE
+                    </button>
+                </form>
 
+                <form class="gate-action-form" method="post" action="{% url 'back1:close_gate' entrance_gate.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="close-gate-btn" {% if not entrance_gate.is_open %}disabled{% endif %}>
+                        CLOSE
+                    </button>
+                </form>
+                {% else %}
+                <button type="button" class="open-gate-btn" disabled>GATE NOT CONFIGURED</button>
+                {% endif %}
 
 
+            </div>
 
-</div>
 
 
 
-</div>
+        </div>
 
 
 
@@ -1333,950 +700,713 @@ slots occupied
 
 
 
-<!-- =========================
-OVERTIME PARKING
-========================= -->
+        <!-- Exit Gate -->
 
 
-<div class="monitor-card">
+        <div class="gate-box">
 
 
-<div class="card-header">
 
+            <h4>
+                Exit Gate
+            </h4>
 
-<h3>
-Overtime Parking
-</h3>
 
 
-</div>
 
 
+            {% if exit_gate and exit_gate.is_open %}
 
+            <div class="gate-image gate-image-open">
+                <i class="bi bi-door-open-fill" aria-hidden="true"></i>
+                <span>Gate Open</span>
+            </div>
 
+            <div class="gate-status open">
 
+                <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+                Open — Caution
 
-{% for booking in overtime_bookings %}
+            </div>
 
+            {% else %}
 
+            <div class="gate-image gate-image-closed">
+                <i class="bi bi-door-closed-fill" aria-hidden="true"></i>
+                <span>Gate Closed</span>
+            </div>
 
-<div class="booking-item">
+            <div class="gate-status closed">
 
+                <i class="bi bi-shield-check" aria-hidden="true"></i>
+                Closed — Safe
 
-<div class="slot-badge">
+            </div>
 
+            {% endif %}
 
-{{ booking.parking_slot.slot_number }}
 
 
-</div>
 
 
 
 
-<div>
+            <div class="gate-buttons">
 
+                {% if exit_gate %}
+                <form class="gate-action-form" method="post" action="{% url 'back1:open_gate' exit_gate.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="open-gate-btn" {% if exit_gate.is_open %}disabled{% endif %}>
+                        OPEN GATE
+                    </button>
+                </form>
 
-<b>
+                <form class="gate-action-form" method="post" action="{% url 'back1:close_gate' exit_gate.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="close-gate-btn" {% if not exit_gate.is_open %}disabled{% endif %}>
+                        CLOSE
+                    </button>
+                </form>
+                {% else %}
+                <button type="button" class="open-gate-btn" disabled>GATE NOT CONFIGURED</button>
+                {% endif %}
 
-{{ booking.user.username }}
 
-</b>
 
+            </div>
 
 
-<p>
 
 
-Overtime:
+        </div>
 
-{{ booking.overtime_minutes }}
 
-minutes
 
 
 
-<br>
 
 
-Penalty:
+    </div>
 
-£20
 
 
-</p>
 
 
 </div>
 
+<!-- ================= SENSOR / EMERGENCY / SYSTEM ================= -->
 
 
+<div class="status-grid">
 
 
-<span class="danger-label">
 
 
-Overtime
 
+<!-- ================= SENSOR STATUS ================= -->
 
-</span>
 
+<div class="dashboard-card modern-card">
 
 
 
-</div>
-
-
-
-
-{% empty %}
-
-
-
+    <div class="section-header">
 
-<p>
 
-No overtime parking
+        <h3>
+            📡 Sensor Status
+        </h3>
 
-</p>
 
+        <span class="live-status">
 
+            ● Live Monitoring
 
+        </span>
 
-{% endfor %}
 
+    </div>
 
+    <!-- Ultrasonic Sensor -->
 
+    <div class="sensor-status-item">
 
+        <div>
 
-</div>
-
+            <h4>
+                Ultrasonic Sensor
+            </h4>
 
+            <p>
+                Parking slot detection
+            </p>
 
+            <small>
+                Updated 2 seconds ago
+            </small>
 
+        </div>
 
-
-</div>
 
+        <span class="online-badge">
 
+            🟢 Online
 
+        </span>
 
+    </div>
 
 
 
+    <!-- IR Sensor -->
 
+    <div class="sensor-status-item">
 
+        <div>
 
-<!-- =========================
-GATE CONTROL
-========================= -->
+            <h4>
+                IR Sensor
+            </h4>
 
+            <p>
+                Vehicle detection
+            </p>
 
-<div class="monitor-card gate-control-card">
+            <small>
+                Updated 2 seconds ago
+            </small>
 
+        </div>
 
 
-<div class="card-header">
+        <span class="online-badge">
 
+            🟢 Online
 
-<h3>
-🚪 Gate Control
-</h3>
+        </span>
 
+    </div>
 
-<span class="status online">
 
-Admin Control
 
-</span>
 
+    <!-- Temperature Sensor -->
 
-</div>
+    <div class="sensor-status-item">
 
+        <div>
 
+            <h4>
+                Temperature Sensor
+            </h4>
 
+            <p>
+                Environment monitoring
+            </p>
 
+            <small>
+                25°C detected
+            </small>
 
+        </div>
 
 
+        <span class="online-badge">
 
+            🟢 Normal
 
+        </span>
 
-<!-- ENTRANCE GATE -->
+    </div>
 
+</div> 
 
 
-<div class="gate-section">
+<!-- ================= EMERGENCY ALERT ================= -->
 
 
-<h4>
+<div class="dashboard-card modern-card">
 
-Entrance Gate
 
-</h4>
 
+    <div class="section-header">
 
 
-{% if entrance_gate %}
+        <h3>
+            🚨 Emergency Alert
+        </h3>
 
 
 
+    </div>
 
 
-<div class="gate-status-box">
 
 
-{% if entrance_gate.is_open %}
 
 
-<span class="gate-open-status">
+    <div class="emergency-status normal">
 
-● Open
 
-</span>
+        🟢 No Active Emergency
 
 
-{% else %}
+    </div>
 
 
-<span class="gate-close-status">
 
-● Closed
 
-</span>
 
 
-{% endif %}
 
+    <div class="emergency-message">
 
 
-</div>
+        <h4>
+            System is operating normally
+        </h4>
 
 
+        <p>
+            All sensors and gates are functioning correctly.
+        </p>
 
 
 
+    </div>
 
-<button
 
-class="gate-open"
 
-onclick="openGate({{ entrance_gate.id }})"
 
->
 
 
-<i class="bi bi-unlock"></i>
 
+    <div class="alert-list">
 
-Open Entrance
 
+        <div>
 
-</button>
+            🔥 Fire Detection
 
+            <span>
+                Normal
+            </span>
 
+        </div>
 
 
 
 
+        <div>
 
-<button
+            📡 Sensor Failure
 
-class="gate-close"
+            <span>
+                No Issue
+            </span>
 
-onclick="closeGate({{ entrance_gate.id }})"
+        </div>
 
->
 
 
-<i class="bi bi-lock"></i>
 
 
-Close Entrance
+        <div>
 
+            🚧 Gate Failure
 
-</button>
+            <span>
+                No Issue
+            </span>
 
+        </div>
 
 
 
+    </div>
 
-{% endif %}
 
 
 
 </div>
-
-
-
-
-
-
-
-
-
-<hr>
-
-
-
-
-
-
-
-
-<!-- EXIT GATE -->
-
-
-
-<div class="gate-section">
-
-
-<h4>
-
-Exit Gate
-
-</h4>
-
-
-
-
-{% if exit_gate %}
-
-
-
-
-
-<div class="gate-status-box">
-
 
-{% if exit_gate.is_open %}
 
 
-<span class="gate-open-status">
 
-● Open
 
-</span>
 
 
-{% else %}
 
 
-<span class="gate-close-status">
+<!-- ================= SYSTEM STATUS ================= -->
 
-● Closed
 
-</span>
+<div class="dashboard-card modern-card">
 
 
-{% endif %}
 
+    <div class="section-header">
 
 
-</div>
-
-
-
-
-
-
-
-<button
-
-class="gate-open"
-
-onclick="openExitGate({{ exit_gate.id }})"
-
->
-
-
-<i class="bi bi-unlock"></i>
-
-
-Open Exit
-
+        <h3>
+            ⚙️ System Status
+        </h3>
 
-</button>
 
+    </div>
 
 
 
 
 
-<button
 
-class="gate-close"
 
-onclick="closeGate({{ exit_gate.id }} )"
+    <div class="system-row">
 
->
 
+        <span>
+            Backend API
+        </span>
 
-<i class="bi bi-lock"></i>
 
+        <span class="online-badge">
 
-Close Exit
+            🟢 Online
 
+        </span>
 
-</button>
 
+    </div>
 
 
 
 
-{% endif %}
 
 
 
+    <div class="system-row">
 
 
-</div>
+        <span>
+            Database
+        </span>
 
 
+        <span class="online-badge">
 
+            🟢 Connected
 
-</div>
+        </span>
 
-<!-- =========================
-RECENT ACTIVITY + BOOKINGS
-========================= -->
 
+    </div>
 
-<div class="dashboard-two-column">
 
 
 
 
 
-<!-- RECENT ACTIVITY -->
 
+    <div class="system-row">
 
-<div class="monitor-card">
 
+        <span>
+            Cloud Server
+        </span>
 
-<div class="card-header">
 
+        <span class="online-badge">
 
-<h3>
-Recent Activity
-</h3>
+            🟢 Running
 
+        </span>
 
-<span>
-View all >
-</span>
 
+    </div>
 
-</div>
 
 
 
 
 
-{% for d in history %}
 
+    <div class="system-row">
 
 
-<div class="activity-item">
+        <span>
+            IoT Connection
+        </span>
 
 
+        <span class="online-badge">
 
-<div class="activity-icon">
+            🟢 Active
 
+        </span>
 
-<i class="bi bi-car-front-fill"></i>
 
+    </div>
 
 </div>
-
-
-
-
-
-<div>
-
-
-<b>
-
-Ultrasonic sensor detected vehicle
-
-</b>
-
-
-
-<p>
-
-{{ d.created_at }}
 
--
-
-{% if d.parking_slot %}
-
-{{ d.parking_slot.slot_number }}
-
-{% endif %}
-
-
-</p>
-
-
+<!-- Close the three-column sensor / emergency / system status grid. -->
 </div>
-
 
+<!-- ================= RECENTLY BOOKING ================= -->
 
 
+    <!-- Recently Section -->
 
-<span class="active-label">
+    
 
-
-{{ d.value }}
-
-
-</span>
-
-
-
-
-</div>
+    <div class="recent-grid">
 
 
+    <!-- Recently Booking -->
 
 
+    <div class="dashboard-card modern-card recent-card booking-card">
 
 
-{% empty %}
+        <div class="section-header">
 
 
+            <h3>
+                🚗 Recently Booking
+            </h3>
 
-<p>
 
-No activity available
+        </div>
 
-</p>
 
 
+        {% for booking in recent_bookings %}
 
-{% endfor %}
 
+        <div class="activity-item">
 
 
+            <div>
 
-</div>
 
+                <strong>
+                    {{ booking.parking_slot.slot_number }}
+                </strong>
 
 
+                <p>
+                    {{ booking.user.username }}
+                </p>
 
 
+                <small>
+                    {{ booking.created_at }}
+                </small>
 
 
+            </div>
 
 
-<!-- RECENT BOOKINGS -->
 
+            <span class="online-badge">
 
-<div class="monitor-card">
+                {{ booking.status|title }}
 
+            </span>
 
-<div class="card-header">
 
+        </div>
 
-<h3>
 
-Recent Bookings
 
-</h3>
+        {% empty %}
 
 
+        <p class="empty-state">
+            No recent booking
+        </p>
 
-<span>
 
-View all >
+        {% endfor %}
 
-</span>
 
 
-</div>
+    </div>
 
 
 
+    <!-- Recently Activity -->
 
 
+    <div class="dashboard-card modern-card recent-card activity-card">
 
 
+        <div class="section-header">
 
-{% for booking in latest_bookings %}
 
+            <h3>
+                ⚡ Recently Activity
+            </h3>
 
 
-<div class="booking-item">
+        </div>
 
 
 
-<div class="slot-badge">
 
 
-{{ booking.parking_slot.slot_number }}
+        {% for activity in recent_activities %}
 
 
-</div>
+        <div class="activity-item">
 
 
+            <div>
 
 
+                <strong>
 
+                    {{ activity.transaction_type|title }}
 
-<div>
+                </strong>
 
 
-<b>
 
-{{ booking.user.username }}
+                <p>
 
-</b>
+                    £{{ activity.amount }}
 
+                </p>
 
 
+            </div>
 
-<p>
 
 
-{{ booking.booking_date }}
+            <small>
 
+                {{ activity.created_at|timesince }} ago
 
-<br>
+            </small>
 
 
-{{ booking.start_time }}
 
--
+        </div>
 
-{{ booking.end_time }}
 
 
-</p>
+        {% empty %}
 
 
-</div>
+        <p class="empty-state">
+            No recent activity
+        </p>
 
 
+        {% endfor %}
 
+    
+    </div>
 
 
 
 
-<span class="active-label">
+    
 
-Active
 
-</span>
+ <!-- Payment & Penalty -->
 
 
+    <div class="dashboard-card modern-card recent-card payment-card">
 
-</div>
+        <div class="section-header">
+            <h3>
+                💰 Payment & Penalty
+            </h3>
+        </div>
 
 
+        <h4>Recent Payments</h4>
 
+        <div class="activity-item">
+            <div>
+                <strong>Booking #001</strong>
+                <p>Customer: John</p>
+            </div>
 
-{% empty %}
+            <span class="online-badge">
+                £5 Paid
+            </span>
+        </div>
 
 
+        <div class="activity-item">
+            <div>
+                <strong>Booking #002</strong>
+                <p>Customer: Anna</p>
+            </div>
 
-<p>
+            <span class="online-badge">
+                £8 Paid
+            </span>
+        </div>
 
-No booking available
 
-</p>
 
+        <h4>Recent Penalties</h4>
 
 
-{% endfor %}
+        <div class="activity-item">
 
+            <div>
+                <strong>Tom Brown</strong>
+                <p>Overtime Parking</p>
+            </div>
 
+            <span class="online-badge">
+                £10
+            </span>
 
+        </div>
 
-</div>
 
+    </div>
 
 
 </div>
-
-
-
-
-
-
-
-
-
-<!-- =========================
-JAVASCRIPT
-========================= -->
-
 
 <script>
+document.querySelectorAll(".gate-action-form").forEach((form) => {
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
 
+        const button = form.querySelector("button");
+        const originalText = button.textContent;
+        button.disabled = true;
+        button.textContent = "UPDATING...";
 
-// =======================
-// OPEN ENTRANCE GATE
-// ADMIN CONTROL
-// =======================
+        try {
+            const response = await fetch(form.action, {
+                method: "POST",
+                body: new FormData(form),
+                headers: {
+                    "X-CSRFToken": form.querySelector("[name=csrfmiddlewaretoken]").value,
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            });
 
+            if (!response.ok) {
+                throw new Error("Gate update failed");
+            }
 
-
-function openGate(id){
-
-
-
-fetch(`/api/gates/${id}/open/`, {
-
-
-method:"POST",
-
-
-
-headers:{
-
-
-"X-CSRFToken":getCookie("csrftoken")
-
-
-}
-
-
-})
-
-
-.then(response=>response.json())
-
-
-.then(data=>{
-
-
-console.log(data);
-
-
-location.reload();
-
-
-})
-
-
-.catch(error=>{
-
-
-console.log(error);
-
-
-alert("Cannot open gate");
-
-
+            window.location.reload();
+        } catch (error) {
+            button.disabled = false;
+            button.textContent = originalText;
+            window.alert("Cannot update the gate. Please try again.");
+        }
+    });
 });
-
-
-
-}
-
-
-
-
-
-
-
-
-// =======================
-// OPEN EXIT GATE
-// =======================
-
-
-function openExitGate(id){
-
-
-
-fetch(`/api/gates/${id}/exit-open/`, {
-
-
-method:"POST",
-
-
-
-headers:{
-
-
-"X-CSRFToken":getCookie("csrftoken")
-
-
-}
-
-
-})
-
-
-.then(response=>response.json())
-
-
-.then(data=>{
-
-
-console.log(data);
-
-
-location.reload();
-
-
-})
-
-
-.catch(error=>{
-
-
-console.log(error);
-
-
-alert("Cannot open exit gate");
-
-
-});
-
-
-
-}
-
-
-
-
-
-
-
-
-// =======================
-// CLOSE GATE
-// =======================
-
-
-function closeGate(id){
-
-
-
-fetch(`/api/gates/${id}/close/`, {
-
-
-method:"POST",
-
-
-
-headers:{
-
-
-"X-CSRFToken":getCookie("csrftoken")
-
-
-}
-
-
-
-})
-
-
-.then(response=>response.json())
-
-
-.then(data=>{
-
-
-console.log(data);
-
-
-location.reload();
-
-
-})
-
-
-.catch(error=>{
-
-
-console.log(error);
-
-
-alert("Cannot close gate");
-
-
-});
-
-
-
-}
-
-
-
-
-
-
-
-
-
-// =======================
-// CSRF COOKIE
-// =======================
-
-
-function getCookie(name){
-
-
-let cookieValue = null;
-
-
-
-if(document.cookie){
-
-
-let cookies = document.cookie.split(';');
-
-
-
-for(let i=0;i<cookies.length;i++){
-
-
-let cookie=cookies[i].trim();
-
-
-
-if(cookie.substring(0,name.length+1)===(name+'=')){
-
-
-cookieValue=decodeURIComponent(
-
-cookie.substring(name.length+1)
-
-);
-
-
-break;
-
-
-}
-
-
-
-}
-
-
-}
-
-
-
-return cookieValue;
-
-
-}
-
-
-
 </script>
-
-
-
-
-
 
 {% endblock %}

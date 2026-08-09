@@ -1,64 +1,53 @@
 /* ==========================
-   SMART CAR PARK DASHBOARD
-   CLEAN VERSION
+GLOBAL
 ========================== */
 
+*{
+    box-sizing:border-box;
+}
 
-/* ==========================
-   GLOBAL
-========================== */
 
+body{
 
-body {
+    margin:0;
 
     min-height:100vh;
 
-    background:
-    linear-gradient(
-        rgba(245,241,234,0.65),
-        rgba(245,241,234,0.8)
-    ),
-    url("../images/plant-bg.jpg")
-    center / cover fixed;
+    background:#f6f8fc;
 
+    font-family:"Inter", Arial, sans-serif;
 
-    font-family:
-    "Inter",
-    system-ui,
-    sans-serif;
-
-
-    color:#263238;
+    color:#1f2937;
 
 }
-
 
 
 
 /* ==========================
-   LAYOUT
+MAIN CONTENT
 ========================== */
 
 
-.layout {
+.main-content{
 
-    display:flex;
+    width:100%;
 
-}
+    max-width:none;
 
+    margin:0;
 
-
-.main-content {
-
-    flex:1;
-
-    padding:30px;
+    padding:20px 30px;
 
 }
 
 
 
-.topbar {
+/* ==========================
+HEADER
+========================== */
+
+
+.dashboard-header{
 
     display:flex;
 
@@ -66,25 +55,42 @@ body {
 
     align-items:center;
 
-    margin-bottom:25px;
+    margin-bottom:20px;
+
+    min-height:120px;
 
 }
 
 
 
-.topbar h1 {
+/* ==========================
+HERO / LOGO
+========================== */
 
-    font-size:32px;
 
-    font-weight:700;
+.hero-section{
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:flex-start;
 
 }
 
 
 
-.topbar p {
+.parking-banner{
 
-    color:#777;
+    width:600px;
+
+    max-width:100%;
+
+    height:auto;
+
+    object-fit:contain;
+
+    display:block;
 
 }
 
@@ -93,31 +99,78 @@ body {
 
 
 /* ==========================
- SIDEBAR
+HEADER RIGHT
 ========================== */
 
 
-.sidebar {
+.header-right{
 
-    width:260px;
+    display:flex;
 
-    min-height:100vh;
+    flex-direction:column;
 
-    padding:25px;
+    align-items:flex-end;
 
-
-    background:
-    rgba(255,255,255,0.65);
-
-
-    backdrop-filter:blur(15px);
-
+    gap:14px;
 
 }
 
 
 
-.logo {
+/* ==========================
+SYSTEM STATUS
+========================== */
+
+
+.system-status{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:8px;
+
+    background:white;
+
+    padding:10px 20px;
+
+    border-radius:30px;
+
+    font-size:14px;
+
+    font-weight:600;
+
+    color:#15803d;
+
+    box-shadow:
+    0 8px 25px rgba(0,0,0,.06);
+
+}
+
+
+
+.status-dot{
+
+    width:10px;
+
+    height:10px;
+
+    background:#22c55e;
+
+    border-radius:50%;
+
+}
+
+
+
+
+
+/* ==========================
+LAST SYNC
+========================== */
+
+
+.update-time{
 
     display:flex;
 
@@ -125,332 +178,437 @@ body {
 
     gap:12px;
 
-}
+    background:white;
 
+    padding:15px 20px;
 
-
-.logo i {
-
-    font-size:35px;
-
-    color:#4d9078;
-
-}
-
-
-
-.logo h4 {
-
-    margin:0;
-
-}
-
-
-
-.sidebar a {
-
-
-    display:flex;
-
-    align-items:center;
-
-    gap:15px;
-
-
-    padding:14px;
-
-
-    margin:8px 0;
-
-
-    border-radius:15px;
-
-
-    color:#555;
-
-
-    text-decoration:none;
-
-
-}
-
-
-
-.sidebar a:hover,
-.sidebar a.active {
-
-
-    background:#dff3e8;
-
-    color:#208c63;
-
-
-}
-
-
-
-
-
-/* ==========================
- GRID
-========================== */
-
-
-.dashboard-grid {
-
-    display:grid;
-
-    grid-template-columns: repeat(4,1fr);
-
-    gap:22px;
-
-}
-
-.full-width {
-    grid-column: 1 / -1;
-}
-
-
-
-.dashboard-grid-revenue{
-
-    width:100%;
-
-    display:grid;
-
-    grid-template-columns:repeat(3,1fr);
-
-    gap:22px;
-
-    margin-top:22px;
-
-}
-
-
-
-.full-width {
-
-    width:100%;
-
-    margin-top:22px;
-
-}
-
-
-
-
-
-
-/* ==========================
- SUMMARY CARD
-========================== */
-
-
-.summary-card {
-
-     width:100%;
-
-
-    background:
-    rgba(255,255,255,0.75);
-
-
-    border-radius:25px;
-
-
-    padding:25px;
-
-
-    display:flex;
-
-
-    align-items:center;
-
-
-    gap:20px;
-
+    border-radius:22px;
 
     box-shadow:
-    0 15px 35px rgba(0,0,0,0.08);
-
-
-    transition:.3s;
-
+    0 10px 30px rgba(0,0,0,.06);
 
 }
 
 
 
-.summary-card:hover {
+.update-time i{
 
+    width:42px;
+
+    height:42px;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    border-radius:14px;
+
+    background:#eff6ff;
+
+    color:#3b82f6;
+
+    font-size:22px;
+
+}
+
+
+
+.update-time small{
+
+    display:block;
+
+    color:#9ca3af;
+
+    font-size:12px;
+
+}
+
+
+
+.update-time strong{
+
+    display:block;
+
+    margin-top:3px;
+
+    font-size:14px;
+
+    color:#111827;
+
+}
+
+/* ==========================
+COMMON CARD STYLE
+========================== */
+
+
+.dashboard-card,
+.summary-card,
+.revenue-card{
+
+    background:white;
+
+    border-radius:24px;
+
+    box-shadow:
+    0 10px 30px rgba(15,23,42,.06);
+
+    transition:.3s ease;
+
+}
+
+
+
+.dashboard-card:hover,
+.summary-card:hover,
+.revenue-card:hover{
 
     transform:translateY(-5px);
 
+    box-shadow:
+    0 20px 45px rgba(15,23,42,.12);
 
 }
 
 
 
-.summary-card p {
+/* ==========================
+SUMMARY CARDS
+========================== */
 
 
-    margin:0;
+.dashboard-summary{
 
-    color:#777;
+    display:grid;
 
+    grid-template-columns:
+    repeat(4,1fr);
+
+    gap:22px;
 
 }
 
 
 
-.summary-card h2 {
+.summary-card{
 
+    display:flex;
+
+    align-items:center;
+
+    gap:18px;
+
+    padding:22px;
+
+    min-height:170px;
+
+}
+
+
+
+
+
+.summary-icon{
+
+    width:62px;
+
+    height:62px;
+
+    border-radius:20px;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    font-size:30px;
+
+    background:#eaf7ef;
+
+}
+
+
+
+.summary-icon.green{
+
+    background:#dcfce7;
+
+}
+
+
+
+.summary-icon.red{
+
+    background:#fee2e2;
+
+}
+
+
+
+.summary-icon.purple{
+
+    background:#ede9fe;
+
+}
+
+
+
+
+
+.summary-content{
+
+    flex:1;
+
+}
+
+
+
+
+
+.summary-card small{
+
+    color:#6b7280;
+
+    font-size:13px;
+
+    font-weight:500;
+
+}
+
+
+
+.summary-card h2{
 
     margin:5px 0;
 
+    font-size:30px;
 
-    font-size:40px;
+    font-weight:750;
 
-
-}
-
-
-
-.summary-card small {
-
-
-    color:#999;
-
+    color:#111827;
 
 }
 
 
 
+.summary-card p{
+
+    margin:0;
+
+    color:#9ca3af;
+
+    font-size:13px;
+
+}
 
 
 
-.icon-circle {
 
+
+/* ==========================
+PROGRESS BAR
+========================== */
+
+
+.mini-progress{
+
+    width:135px;
+
+    height:7px;
+
+    background:#e5e7eb;
+
+    border-radius:20px;
+
+    overflow:hidden;
+
+    margin-top:10px;
+
+}
+
+
+
+.available-progress{
+
+    width:50%;
+
+    height:100%;
+
+    background:#22c55e;
+
+    border-radius:20px;
+
+}
+
+
+
+.occupied-progress{
+
+    width:50%;
+
+    height:100%;
+
+    background:#ef4444;
+
+    border-radius:20px;
+
+}
+
+
+
+
+
+.percentage-text{
+
+    margin-top:6px;
+
+    display:block;
+
+    font-size:12px;
+
+    color:#6b7280;
+
+}
+
+
+
+
+
+/* ==========================
+LIVE STATUS
+========================== */
+
+
+.live-status{
+
+    display:inline-flex;
+
+    align-items:center;
+
+    gap:5px;
+
+    margin-top:8px;
+
+    padding:6px 12px;
+
+    border-radius:20px;
+
+    background:#dcfce7;
+
+    color:#16a34a;
+
+    font-size:12px;
+
+    font-weight:600;
+
+}
+
+/* ==========================
+REVENUE CARDS
+========================== */
+
+
+.revenue-grid{
+
+    display:grid;
+
+    grid-template-columns:
+    repeat(3,1fr);
+
+    gap:22px;
+
+    margin-top:18px;
+
+}
+
+
+
+
+
+.revenue-card{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:18px;
+
+    padding:22px;
+
+    min-height:160px;
+
+    border-top:4px solid #22c55e;
+
+}
+
+
+
+
+
+.total-revenue{
+
+    border-top-color:#3b82f6;
+
+}
+
+
+
+.parking-revenue{
+
+    border-top-color:#22c55e;
+
+}
+
+
+
+.penalty-revenue{
+
+    border-top-color:#ef4444;
+
+}
+
+
+
+
+
+
+
+.revenue-icon{
 
     width:60px;
 
     height:60px;
 
-
-    border-radius:50%;
-
+    border-radius:20px;
 
     display:flex;
-
-
-    align-items:center;
-
 
     justify-content:center;
 
-
-    font-size:25px;
-
-
-}
-
-
-
-.icon-circle.green,
-.icon-circle.mint {
-
-
-    background:#dcf5ef;
-
-    color:#208c63;
-
-
-}
-
-
-
-.icon-circle.pink {
-
-
-    background:#ffe1e8;
-
-    color:#ef6680;
-
-
-}
-
-
-
-.icon-circle.purple {
-
-
-    background:#eee5ff;
-
-    color:#8067d9;
-
-
-}
-
-
-
-
-
-/* ==========================
- MODERN CARD
-========================== */
-
-
-.modern-card {
-
-
-    background:
-    rgba(255,255,255,0.75);
-
-
-    backdrop-filter:blur(15px);
-
-
-    border-radius:25px;
-
-
-    padding:30px;
-
-
-    box-shadow:
-
-    0 15px 35px rgba(0,0,0,0.08);
-
-}
-
-
-
-
-.modern-card h4 {
-
-
-    font-weight:600;
-
-
-    margin-bottom:25px;
-
-
-}
-
-
-
-
-
-.card-title {
-
-
-    display:flex;
-
-
-    justify-content:space-between;
-
-
     align-items:center;
 
+    font-size:28px;
+
+    background:#eff6ff;
+
+}
+
+
+
+.revenue-icon.green{
+
+    background:#dcfce7;
+
+}
+
+
+
+.revenue-icon.red{
+
+    background:#fee2e2;
 
 }
 
@@ -458,76 +616,40 @@ body {
 
 
 
+.revenue-card small{
 
-/* ==========================
- SENSOR
-========================== */
+    color:#6b7280;
 
-
-.sensor-box {
-
-
-    display:flex;
-
-
-    align-items:center;
-
-
-    gap:20px;
-
+    font-size:13px;
 
 }
 
 
 
-.sensor-icon {
+.revenue-card h2{
 
-
-    width:70px;
-
-
-    height:70px;
-
-
-    border-radius:50%;
-
-
-    background:#dcf5ef;
-
-
-    display:flex;
-
-
-    justify-content:center;
-
-
-    align-items:center;
-
+    margin:5px 0;
 
     font-size:30px;
 
+    font-weight:750;
 
-    color:#208c63;
+    color:#111827;
 
+}
+
+
+
+.revenue-card p{
+
+    margin:0;
+
+    font-size:13px;
+
+    color:#9ca3af;
 
 }
 
-
-
-
-.info-row {
-
-
-    display:flex;
-
-
-    justify-content:space-between;
-
-
-    padding:12px 0;
-
-
-}
 
 
 
@@ -535,152 +657,101 @@ body {
 
 
 /* ==========================
- SYSTEM STATUS
+REVENUE BADGES
 ========================== */
 
 
-.system-box {
+.revenue-up{
 
+    display:inline-block;
+
+    margin-top:8px;
+
+    padding:5px 12px;
+
+    border-radius:20px;
+
+    background:#dcfce7;
+
+    color:#16a34a;
+
+    font-size:12px;
+
+    font-weight:600;
+
+}
+
+
+
+.revenue-warning{
+
+    display:inline-block;
+
+    margin-top:8px;
+
+    padding:5px 12px;
+
+    border-radius:20px;
+
+    background:#fee2e2;
+
+    color:#dc2626;
+
+    font-size:12px;
+
+    font-weight:600;
+
+}
+
+
+
+
+
+
+
+/* ==========================
+SECTION HEADER
+========================== */
+
+
+.section-header{
 
     display:flex;
-
 
     justify-content:space-between;
 
-
     align-items:center;
 
-
-    padding:15px;
-
-
-    margin-bottom:12px;
-
-
-    border-radius:15px;
-
-
-    background:#f8faf9;
-
+    margin-bottom:20px;
 
 }
 
 
 
-.system-box i {
 
 
-    color:#3d947c;
+.section-header h3{
 
+    margin:0;
 
-    margin-right:10px;
-
-
-}
-
-/* ==========================
- PARKING MAP
-========================== */
-
-
-.parking-road {
-
-}
-
-.parking-layout{
-
-display:flex;
-
-align-items:center;
-
-gap:25px;
-
-background:#f3f4f4;
-
-border-radius:25px;
-
-padding:30px;
-
-}
-
-
-
-.gate-side{
-
-display:flex;
-
-flex-direction:column;
-
-align-items:center;
-
-justify-content:center;
-
-font-weight:700;
-
-color:#777;
-
-width:90px;
-
-}
-
-
-
-.gate-side i{
-
-font-size:35px;
-
-margin-bottom:10px;
-
-}
-
-
-
-.parking-layout {
-
-    display:flex;
-
-    align-items:center;
-
-    gap:25px;
-
-    background:#f3f4f4;
-
-    border-radius:25px;
-
-    padding:25px;
-
-}
-
-
-.parking-layout .parking-map {
-
-    flex:1;
-
-    display:grid;
-
-    grid-template-columns:repeat(3,1fr);
-
-    gap:25px;
-
-}
-
-
-
-.entrance,
-.exit {
-
-
-    text-align:center;
-
+    font-size:22px;
 
     font-weight:700;
 
+    color:#111827;
 
-    color:#777;
+}
+
+/* ==========================
+PARKING LOT OVERVIEW
+========================== */
 
 
-    margin:15px;
+.parking-map-card{
 
+    margin-top:30px;
+
+    padding:30px;
 
 }
 
@@ -688,98 +759,577 @@ margin-bottom:10px;
 
 
 
-.parking-map {
+.parking-map-card h3{
 
+    font-size:22px;
+
+}
+
+
+
+
+
+
+
+/* ==========================
+LEGEND
+========================== */
+
+
+.parking-legend{
+
+    display:flex;
+
+    gap:18px;
+
+}
+
+
+
+
+
+.legend{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:6px;
+
+    color:#6b7280;
+
+    font-size:13px;
+
+}
+
+
+
+
+
+.available-dot::before{
+
+    content:"";
+
+    width:10px;
+
+    height:10px;
+
+    background:#22c55e;
+
+    border-radius:50%;
+
+    display:inline-block;
+
+}
+
+
+
+
+
+.occupied-dot::before{
+
+    content:"";
+
+    width:10px;
+
+    height:10px;
+
+    background:#ef4444;
+
+    border-radius:50%;
+
+    display:inline-block;
+
+}
+
+
+
+
+
+
+
+
+/* ==========================
+PARKING REAL LAYOUT
+========================== */
+
+
+.parking-real-layout{
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    gap:35px;
+
+    padding:30px 0;
+
+}
+
+
+
+
+
+
+
+/* ==========================
+GATE
+========================== */
+
+
+.parking-gate{
+
+    width:100px;
+
+    height:120px;
+
+    border-radius:25px;
+
+    background:#eff6ff;
+
+    color:#2563eb;
+
+    display:flex;
+
+    flex-direction:column;
+
+    justify-content:center;
+
+    align-items:center;
+
+    font-weight:700;
+
+}
+
+
+
+
+
+.gate-icon{
+
+    font-size:40px;
+
+    margin-bottom:8px;
+
+}
+
+
+
+
+
+.parking-gate span{
+
+    font-size:13px;
+
+}
+
+
+
+
+
+
+
+
+/* ==========================
+PARKING SLOTS
+========================== */
+
+
+.parking-slots-real{
 
     display:grid;
 
+    grid-template-columns:
+
+    repeat(3,130px);
+
+    gap:18px;
+
+}
+
+
+
+
+
+
+
+.real-slot{
+
+    height:95px;
+
+    border-radius:22px;
+
+    display:flex;
+
+    flex-direction:column;
+
+    justify-content:center;
+
+    align-items:center;
+
+    font-weight:700;
+
+    transition:.3s;
+
+}
+
+
+
+
+
+.real-slot:hover{
+
+    transform:translateY(-5px);
+
+}
+
+
+
+
+
+.real-slot strong{
+
+    font-size:20px;
+
+}
+
+
+
+
+
+.real-slot span{
+
+    margin-top:5px;
+
+    font-size:12px;
+
+}
+
+
+
+
+
+
+
+.real-slot.available{
+
+    background:#dcfce7;
+
+    color:#15803d;
+
+}
+
+
+
+
+
+.real-slot.occupied{
+
+    background:#fee2e2;
+
+    color:#dc2626;
+
+}
+
+/* ==========================
+GATE CONTROL
+========================== */
+
+
+.gate-control{
+
+    margin-top:25px;
+
+    padding:30px;
+
+}
+
+
+
+
+
+
+.gate-control-grid{
+
+    display:grid;
+
+    grid-template-columns:
+
+    repeat(2,1fr);
+
+    gap:25px;
+
+}
+
+
+
+
+
+
+
+.gate-box{
+
+    background:#f8fafc;
+
+    border-radius:24px;
+
+    padding:22px;
+
+    text-align:center;
+
+}
+
+
+
+
+
+.gate-box h4{
+
+    margin:0;
+
+    font-size:18px;
+
+    color:#1f2937;
+
+}
+
+
+
+
+
+
+
+.gate-image{
+
+    height:120px;
+
+    margin:20px 0;
+
+    border-radius:22px;
+
+    background:white;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    flex-direction:column;
+
+    gap:8px;
+
+    font-size:45px;
+
+    border:2px solid transparent;
+
+    box-shadow:
+
+    0 5px 20px rgba(0,0,0,.05);
+
+}
+
+.gate-image i{
+    font-size:52px;
+    line-height:1;
+}
+
+.gate-image span{
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:.02em;
+}
+
+.gate-image-open{
+    background:#fff1f2;
+    border-color:#fecaca;
+    color:#dc2626;
+}
+
+.gate-image-closed{
+    background:#f0fdf4;
+    border-color:#bbf7d0;
+    color:#16a34a;
+}
+
+
+
+
+
+
+
+.gate-status{
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    gap:8px;
+
+    padding:12px;
+
+    border-radius:20px;
+
+    font-weight:700;
+
+    margin-bottom:15px;
+
+}
+
+
+
+
+
+
+.gate-status.open{
+
+    background:#fee2e2;
+
+    color:#b91c1c;
+
+}
+
+
+
+
+
+
+.gate-status.closed{
+
+    background:#dcfce7;
+
+    color:#15803d;
+
+}
+
+
+
+
+
+
+
+
+/* ==========================
+GATE BUTTONS
+========================== */
+
+
+.gate-buttons{
+
+    display:flex;
+
+    gap:12px;
+
+}
+
+.gate-action-form{
+    flex:1;
+    margin:0;
+}
+
+
+
+
+
+
+
+.open-gate-btn,
+.close-gate-btn{
+
+    flex:1;
+
+    height:42px;
+
+    border-radius:20px;
+
+    font-weight:700;
+
+    cursor:pointer;
+
+    width:100%;
+
+}
+
+.open-gate-btn:disabled,
+.close-gate-btn:disabled{
+    cursor:not-allowed;
+    opacity:.45;
+    filter:saturate(.4);
+}
+
+
+
+
+
+
+
+.open-gate-btn{
+
+    background:#16a34a;
+
+    color:white;
+
+    border:none;
+
+}
+
+
+
+
+
+.open-gate-btn:hover{
+
+    background:#15803d;
+
+}
+
+
+
+
+
+
+
+.close-gate-btn{
+
+    background:white;
+
+    color:#374151;
+
+    border:1px solid #d1d5db;
+
+}
+
+
+
+
+
+
+
+.close-gate-btn:hover{
+
+    background:#f3f4f6;
+
+}
+
+/* ==========================
+SENSOR / EMERGENCY / SYSTEM
+========================== */
+
+
+.status-grid{
+
+    display:grid;
 
     grid-template-columns:
     repeat(3,1fr);
 
-
     gap:25px;
 
-
-}
-
-
-
-.parking-slot {
-
-
-    height:130px;
-
-
-    border-radius:22px;
-
-
-    display:flex;
-
-
-    flex-direction:column;
-
-
-    align-items:center;
-
-
-    justify-content:center;
-
-
-    font-size:18px;
-
-
-    transition:.3s;
-
-
-}
-
-
-
-.parking-slot:hover {
-
-
-    transform:translateY(-5px);
-
-
-}
-
-
-
-.parking-slot i {
-
-
-    font-size:35px;
-
-
-    margin-bottom:10px;
-
-
-}
-
-
-
-.parking-slot.available {
-
-
-    background:#dcf5e8;
-
-
-    color:#208c63;
-
-
-}
-
-
-
-.parking-slot.occupied {
-
-
-    background:#ffe1e8;
-
-
-    color:#ef6680;
-
+    margin-top:30px;
 
 }
 
@@ -787,111 +1337,18 @@ margin-bottom:10px;
 
 
 
-/* ==========================
- OCCUPANCY
-========================== */
 
 
-.occupancy-card {
+.status-grid .dashboard-card{
 
+    padding:28px;
 
-    text-align:center;
-
+    min-height:320px;
 
 }
 
 
 
-.circle-chart {
-
-
-    width:160px;
-
-
-    height:160px;
-
-
-    border-radius:50%;
-
-
-    margin:30px auto;
-
-
-    background:
-
-
-    conic-gradient(
-
-    #6fcf97 0% 50%,
-
-    #ffd6df 50% 100%
-
-    );
-
-
-    display:flex;
-
-
-    justify-content:center;
-
-
-    align-items:center;
-
-
-}
-
-
-
-.circle-number {
-
-
-    width:120px;
-
-
-    height:120px;
-
-
-    border-radius:50%;
-
-
-    background:white;
-
-
-    display:flex;
-
-
-    flex-direction:column;
-
-
-    justify-content:center;
-
-
-    align-items:center;
-
-
-    font-size:32px;
-
-
-    font-weight:700;
-
-
-}
-
-
-
-.circle-number span {
-
-
-    font-size:14px;
-
-
-    font-weight:400;
-
-
-    color:#777;
-
-
-}
 
 
 
@@ -899,316 +1356,67 @@ margin-bottom:10px;
 
 
 /* ==========================
- GATE
+SENSOR STATUS
 ========================== */
 
 
-.gate-image {
-
-
-    height:80px;
-
-
-    border-radius:20px;
-
-
-    background:#edf5f2;
-
+.sensor-status-item{
 
     display:flex;
-
-
-    align-items:center;
-
-
-    justify-content:center;
-
-
-    font-size:55px;
-
-
-    color:#3d947c;
-
-
-    margin-bottom:20px;
-
-
-}
-
-/* Gate safety status */
-
-
-/* Gate OPEN = danger */
-
-.gate-danger {
-
-    background:#ffe1e8;
-
-    color:#ef6680;
-
-}
-
-
-
-/* Gate CLOSED = safe */
-
-.gate-safe {
-
-    background:#dcf5e8;
-
-    color:#208c63;
-
-}
-
-.gate-image i {
-
-    transition:0.3s;
-
-}
-
-
-.gate-open-status {
-
-    background:#ffe1e8;
-
-    color:#ef6680;
-
-    padding:12px;
-
-    text-align:center;
-
-    border-radius:20px;
-
-    margin-bottom:15px;
-
-}
-
-
-
-
-.gate-close-status {
-
-    background:#dcf5e8;
-
-    color:#208c63;
-
-    padding:12px;
-
-    text-align:center;
-
-    border-radius:20px;
-
-    margin-bottom:15px;
-
-}
-
-
-
-
-.gate-open,
-.gate-close {
-
-
-    width:100%;
-
-
-    padding:10px;
-
-
-    border-radius:30px;
-
-
-    border:none;
-
-
-    margin-top:10px;
-
-
-    font-size:16px;
-
-
-}
-
-
-
-.gate-open {
-
-
-    background:#3d947c;
-
-
-    color:white;
-
-
-}
-
-
-
-.gate-close {
-
-
-    background:white;
-
-
-    border:1px solid #ddd;
-
-
-}
-
-
-
-
-
-
-/* ==========================
- ACTIVITY
-========================== */
-
-
-.activity-item {
-
-
-    display:flex;
-
-
-    align-items:center;
-
-
-    gap:15px;
-
-
-    padding:15px 0;
-
-
-    border-bottom:
-
-    1px solid #eee;
-
-
-}
-
-
-
-.activity-icon {
-
-
-    width:45px;
-
-
-    height:45px;
-
-
-    border-radius:50%;
-
-
-    background:#dcf5ef;
-
-
-    display:flex;
-
-
-    justify-content:center;
-
-
-    align-items:center;
-
-
-    color:#208c63;
-
-
-}
-
-
-
-
-
-
-.active-label {
-
-
-    background:#dcf5e8;
-
-
-    color:#208c63;
-
-
-    padding:6px 15px;
-
-
-    border-radius:20px;
-
-
-    font-size:13px;
-
-
-}
-
-
-
-
-
-
-/* ==========================
- BOOKING
-========================== */
-
-
-.booking-item {
-
-
-    display:flex;
-
-
-    align-items:center;
-
 
     justify-content:space-between;
 
+    align-items:center;
 
-    padding:15px 0;
+    background:#f8fafc;
 
+    padding:16px;
 
-    border-bottom:
+    border-radius:20px;
 
-    1px solid #eee;
+    margin-bottom:14px;
 
-
-}
-
-
-
-
-.slot-badge {
-
-
-    background:#dcf5e8;
-
-
-    color:#208c63;
-
-
-    padding:12px;
-
-
-    border-radius:12px;
-
+    border:1px solid #f1f5f9;
 
 }
 
 
 
 
-.booking-item p {
 
+.sensor-status-item h4{
+
+    margin:0;
+
+    font-size:15px;
+
+    color:#1f2937;
+
+}
+
+
+
+
+
+.sensor-status-item p{
 
     margin:5px 0;
 
-
-    color:#777;
-
+    color:#6b7280;
 
     font-size:13px;
 
+}
+
+
+
+
+
+.sensor-status-item small{
+
+    color:#9ca3af;
+
+    font-size:12px;
 
 }
 
@@ -1217,408 +1425,503 @@ margin-bottom:10px;
 
 
 
+
 /* ==========================
- STATUS
+ONLINE BADGE
 ========================== */
 
 
-.status.online {
+.online-badge{
+
+    background:#dcfce7;
+
+    color:#15803d;
+
+    padding:7px 14px;
+
+    border-radius:20px;
+
+    font-size:12px;
+
+    font-weight:700;
+
+    white-space:nowrap;
+
+}
 
 
-    color:#208c63;
 
+
+
+
+
+
+
+
+/* ==========================
+EMERGENCY ALERT
+========================== */
+
+
+.emergency-status.normal{
+
+    background:#dcfce7;
+
+    color:#15803d;
+
+    padding:16px;
+
+    border-radius:22px;
+
+    text-align:center;
+
+    font-weight:700;
+
+    margin-bottom:18px;
+
+}
+
+
+
+
+
+
+.emergency-message{
+
+    background:#f8fafc;
+
+    padding:20px;
+
+    border-radius:22px;
+
+    margin-bottom:15px;
+
+}
+
+
+
+
+
+
+.emergency-message h4{
+
+    margin:0 0 8px;
+
+    font-size:17px;
+
+}
+
+
+
+
+
+.emergency-message p{
+
+    margin:0;
+
+    color:#6b7280;
+
+    font-size:14px;
+
+}
+
+
+
+
+
+
+
+.alert-list{
+
+    background:#fff7ed;
+
+    border-radius:20px;
+
+    padding:15px;
+
+}
+
+
+
+
+
+.alert-list div{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    padding:10px 0;
+
+    font-size:14px;
+
+    border-bottom:1px solid #fed7aa;
+
+}
+
+
+
+
+
+.alert-list div:last-child{
+
+    border-bottom:none;
+
+}
+
+
+
+
+
+.alert-list span{
+
+    color:#16a34a;
 
     font-weight:600;
 
-
 }
+
+
+
+
+
 
 
 
 
 
 /* ==========================
- RESPONSIVE
+SYSTEM STATUS
 ========================== */
 
 
-@media(max-width:1000px){
+.system-row{
 
-
-    .dashboard-grid {
-
-
-        grid-template-columns:
-        repeat(2,1fr);
-
-    }
-
-
-
-    .dashboard-grid-2 {
-
-
-        grid-template-columns:1fr;
-
-    }
-
-
-}
-
-
-
-
-@media(max-width:600px){
-
-
-    .layout {
-
-
-        flex-direction:column;
-
-    }
-
-
-    .sidebar {
-
-
-        width:100%;
-
-    }
-
-
-
-    .dashboard-grid {
-
-
-        grid-template-columns:1fr;
-
-    }
-
-
-    .parking-map {
-
-
-        grid-template-columns:
-        repeat(2,1fr);
-
-    }
-
-
-}
-
-.parking-layout{
     display:flex;
+
+    justify-content:space-between;
+
     align-items:center;
-    gap:25px;
-    background:#f3f4f4;
-    padding:30px;
-    border-radius:25px;
+
+    padding:16px 0;
+
+    border-bottom:1px solid #f1f5f9;
+
 }
 
-.gate-side{
-    width:80px;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    color:#777;
-    font-weight:600;
+
+
+
+
+.system-row:last-child{
+
+    border-bottom:none;
+
 }
 
-.gate-side i{
-    font-size:35px;
-    margin-bottom:10px;
+
+
+
+
+.system-row span:first-child{
+
+    font-size:15px;
+
+    color:#374151;
+
+    font-weight:500;
+
 }
 
-.parking-map{
-    flex:1;
-    display:grid;
-    grid-template-columns:repeat(3,1fr);
-    gap:25px;
-}
 
-/* Revenue Cards */
 
-.dashboard-grid-revenue{
-    display:grid;
-    grid-template-columns:repeat(3,1fr);
-    gap:22px;
-    margin-top:22px;
+
+
+.system-row .online-badge{
+
+    background:#dcfce7;
+
+    color:#15803d;
+
 }
 
 /* ==========================
-   DASHBOARD TWO COLUMN
+FINAL DASHBOARD LAYOUT
 ========================== */
 
 
-.dashboard-grid-2 {
+.status-grid{
 
     display:grid;
 
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns:repeat(3,1fr);
 
-    gap:22px;
+    gap:25px;
 
     width:100%;
 
-    margin-top:22px;
+    margin-top:30px;
 
+}
+
+
+
+.status-grid .dashboard-card{
+
+    width:100%;
+
+    min-width:0;
+
+    padding:28px;
+
+    overflow:hidden;
+
+}
+
+
+
+.dashboard-card,
+.summary-card,
+.revenue-card{
+
+    width:100%;
+
+    min-width:0;
+
+    box-sizing:border-box;
+
+}
+
+
+
+
+@media(max-width:1200px){
+
+    .status-grid{
+
+        grid-template-columns:1fr;
+
+    }
+
+}
+
+/* ==========================
+POLISHED PAGE LAYOUT
+========================== */
+
+.main-content{
+    width:100%;
+    max-width:1800px;
+    margin:0 auto;
+    padding:28px clamp(20px, 3vw, 56px) 56px;
+}
+
+.dashboard-header{
+    padding:0 4px;
+}
+
+.dashboard-summary,
+.revenue-grid,
+.status-grid,
+.recent-grid{
     align-items:stretch;
-
 }
 
-
-
-.left-column {
-
-    display:flex;
-
-    flex-direction:column;
-
-    gap:22px;
-
-}
-
-
-
-.right-column {
-
-    width:100%;
-
-}
-
-
-
-.dashboard-grid-2 .modern-card {
-
-    width:100%;
-
-    height:auto;
-
-}
-
-/* ==========================
- FINAL OCCUPANCY + GATE FIX
-========================== */
-
-
-.dashboard-grid-2 {
-
+.recent-grid{
     display:grid;
-
-    grid-template-columns:1fr 1fr;
-
-    gap:22px;
-
-    align-items:start;
-
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:24px;
+    width:100%;
+    margin-top:24px;
 }
 
+.recent-card{
+    position:relative;
+    min-width:0;
+    min-height:320px;
+    padding:28px;
+    overflow:hidden;
+    border:1px solid rgba(226,232,240,.8);
+}
 
+.recent-card::before{
+    content:"";
+    position:absolute;
+    top:0;
+    left:0;
+    width:100%;
+    height:4px;
+    background:linear-gradient(90deg,#3b82f6,#60a5fa);
+}
 
-/* left side */
+.activity-card::before{
+    background:linear-gradient(90deg,#f59e0b,#fbbf24);
+}
 
-.occupancy-card {
+.payment-card::before{
+    background:linear-gradient(90deg,#22c55e,#4ade80);
+}
 
-    height:330px;
+.recent-card .section-header{
+    margin-bottom:20px;
+    padding-bottom:16px;
+    border-bottom:1px solid #eef2f7;
+}
 
+.recent-card .section-header h3{
+    margin:0;
+    font-size:20px;
+    line-height:1.3;
+}
+
+.recent-card > h4{
+    margin:22px 0 10px;
+    color:#64748b;
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+}
+
+.activity-item{
     display:flex;
-
-    flex-direction:column;
-
-    justify-content:center;
-
+    justify-content:space-between;
+    align-items:center;
+    gap:18px;
+    padding:14px 0;
+    border-bottom:1px solid #f1f5f9;
 }
 
-
-
-.occupancy-card .circle-chart {
-
-    margin:15px auto;
-
+.activity-item:last-child{
+    border-bottom:0;
 }
 
+.activity-item p{
+    margin:4px 0 0;
+    color:#64748b;
+    font-size:14px;
+}
 
+.activity-item small{
+    color:#94a3b8;
+    white-space:nowrap;
+}
 
+.recent-card .online-badge{
+    flex:0 0 auto;
+    padding:7px 12px;
+    border-radius:999px;
+    background:#dcfce7;
+    color:#15803d;
+    font-size:12px;
+    font-weight:700;
+    white-space:nowrap;
+}
 
-/* overtime */
-
-.occupancy-card + .modern-card {
-
+.empty-state{
+    display:grid;
+    place-items:center;
     min-height:180px;
-
+    margin:0;
+    border:1px dashed #dbe3ef;
+    border-radius:18px;
+    background:#f8fafc;
+    color:#94a3b8;
+    text-align:center;
 }
 
+@media(max-width:1200px){
+    .dashboard-summary{
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+    }
 
+    .recent-grid{
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+    }
 
-/* gate */
-
-.dashboard-grid-2 .modern-card {
-
-    box-sizing:border-box;
-
+    .payment-card{
+        grid-column:1 / -1;
+    }
 }
 
-
-
-.gate-image {
-
-    height:65px;
-
-}
-
-
-
-.gate-open-status,
-.gate-close-status {
-
-    padding:10px;
-
-}
-/* ==========================
-   FINAL DASHBOARD CARD SIZE FIX
-========================== */
-
-
-.dashboard-grid-2 {
-
-    display:grid;
-
-    grid-template-columns:1fr 1fr;
-
-    gap:22px;
-
-    width:100%;
-
-    margin-top:22px;
-
-    align-items:start;
-
-}
-
-
-
-.dashboard-grid-2 .modern-card {
-
-    height:auto;
-
-    min-height:0;
-
-    box-sizing:border-box;
-
-}
-
-
-
-/* Occupancy card */
-
-.occupancy-card {
-
-    height:330px;
-
-    display:flex;
-
-    flex-direction:column;
-
-    justify-content:center;
-
-}
-
-
-
-.occupancy-card .circle-chart {
-
-    margin:20px auto;
-
-}
-
-
-
-/* Overtime card */
-
-.occupancy-card + .modern-card {
-
-    height:auto;
-
-}
-
-
-
-/* Gate card */
-
-.gate-card {
-
-    height:auto;
-
-}
-
-
-
-.gate-image {
-
-    height:65px;
-
-}
-
-/* Equal height for dashboard cards */
-
-.dashboard-grid-2 {
-    align-items: stretch;
-}
-
-
-.dashboard-grid-2 > .modern-card {
-    height: 100%;
-}
-
-
-.dashboard-grid-2 .left-column,
-.dashboard-grid-2 .right-column {
-    display: flex;
-    flex-direction: column;
-}
-
-
-.dashboard-grid-2 .right-column .modern-card {
-    flex: 1;
-}
-
-
-.dashboard-grid-2 .left-column .modern-card {
-    flex: 1;
-}
-
-/* FIX OCCUPANCY + GATE HEIGHT */
-
-.dashboard-grid-2 {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 22px;
-    align-items: stretch;
-}
-
-
-.occupancy-wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 22px;
-    height: 100%;
-}
-
-
-.occupancy-wrapper .modern-card {
-    flex: 1;
-}
-
-
-.gate-card {
-    height: 100%;
-}
-
-
-/* make both sides same height */
-
-.dashboard-grid-2:nth-of-type(3) {
-    align-items: stretch;
+@media(max-width:768px){
+    .main-content{
+        padding:18px 14px 36px;
+    }
+
+    .dashboard-header{
+        align-items:flex-start;
+        flex-direction:column;
+        gap:18px;
+        min-height:auto;
+        margin-bottom:24px;
+    }
+
+    .header-right{
+        width:100%;
+        align-items:stretch;
+    }
+
+    .system-status,
+    .update-time{
+        justify-content:center;
+    }
+
+    .dashboard-summary,
+    .revenue-grid,
+    .status-grid,
+    .recent-grid{
+        grid-template-columns:1fr;
+        gap:16px;
+    }
+
+    .payment-card{
+        grid-column:auto;
+    }
+
+    .parking-real-layout{
+        flex-direction:column;
+        gap:20px;
+        padding:18px 0 0;
+    }
+
+    .parking-gate{
+        width:100%;
+        height:86px;
+    }
+
+    .parking-slots-real{
+        width:100%;
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+        gap:12px;
+    }
+
+    .real-slot{
+        width:100%;
+    }
+
+    .gate-control-grid{
+        grid-template-columns:1fr;
+        gap:16px;
+    }
+
+    .gate-box{
+        min-width:0;
+        padding:18px;
+    }
+
+    .gate-buttons{
+        flex-wrap:wrap;
+    }
+
+    .summary-card,
+    .revenue-card,
+    .status-grid .dashboard-card,
+    .recent-card{
+        padding:22px;
+    }
+
+    .recent-card{
+        min-height:auto;
+    }
 }
