@@ -1,0 +1,61 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --font-display: 'Poppins', 'Segoe UI', sans-serif;
+  --font-body: 'Inter', 'Segoe UI', Roboto, sans-serif;
+
+  --color-lime: #c3e02b;
+  --color-lime-dark: #a9c31f;
+  --color-ink: #101010;
+  --color-ink-soft: #1c1c1c;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-white text-ink font-body antialiased;
+  min-width: 320px;
+  overflow-x: hidden;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+@layer components {
+  .logo {
+    @apply inline-flex items-center border-2 border-white bg-ink px-[18px] py-[9px] font-display text-[1.05rem] font-bold tracking-wide text-white;
+  }
+
+  .logo-invert {
+    @apply border-ink bg-white text-ink;
+  }
+
+  .btn {
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-full px-8 py-3 font-display text-sm font-medium transition-all duration-200 hover:-translate-y-0.5;
+  }
+
+  .btn-lime {
+    @apply bg-lime text-ink hover:bg-lime-dark;
+  }
+
+  .btn-outline {
+    @apply border border-white/45 bg-transparent text-white hover:bg-white hover:text-ink;
+  }
+
+  .field-dark {
+    @apply w-full border-0 border-b border-white/35 bg-transparent px-0.5 py-3 text-sm text-white placeholder-white/50 outline-none transition-colors focus:border-lime;
+  }
+
+  .field-light {
+    @apply w-full border-0 border-b border-neutral-200 bg-transparent px-0.5 py-3 text-sm text-ink placeholder-neutral-400 outline-none transition-colors focus:border-lime-dark;
+  }
+
+  .eyebrow {
+    @apply mb-3.5 font-display text-xs font-semibold tracking-[0.26em] text-lime-dark uppercase;
+  }
+}
