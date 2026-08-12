@@ -1,0 +1,28 @@
+{% extends "back1/base.html" %}
+{% block content %}
+<section class="admin-history-page">
+  <header class="history-page-header">
+    <div class="history-title-wrap"><span class="history-title-icon orange">⚡</span><div><h1>System Event Log</h1><p>Detailed activity recorded for the selected date.</p></div></div>
+    <a class="history-back-button" href="{% url 'back1:admin-dashboard' %}?date={{ viewing_date|date:'Y-m-d' }}">← Back to Dashboard</a>
+  </header>
+
+  <div class="history-date-bar" aria-label="Event viewing date">
+    <div class="history-date-label"><span>Viewing Date</span><strong>📅 {{ viewing_date|date:"d M Y" }}</strong></div>
+    <div class="history-date-actions"><a href="?date={{ viewing_previous_date|date:'Y-m-d' }}&q={{ event_query|urlencode }}&type={{ selected_event_type }}&source={{ selected_event_source }}">← Previous Day</a><a href="?date={% now 'Y-m-d' %}&q={{ event_query|urlencode }}&type={{ selected_event_type }}&source={{ selected_event_source }}">Today</a><a href="?date={{ viewing_next_date|date:'Y-m-d' }}&q={{ event_query|urlencode }}&type={{ selected_event_type }}&source={{ selected_event_source }}">Next Day →</a><form method="get"><input type="date" name="date" value="{{ viewing_date|date:'Y-m-d' }}"><input type="hidden" name="q" value="{{ event_query }}"><input type="hidden" name="type" value="{{ selected_event_type }}"><input type="hidden" name="source" value="{{ selected_event_source }}"><button type="submit">Apply</button></form></div>
+  </div>
+
+  <form class="history-filter-card event-filter-card" method="get">
+    <input type="hidden" name="date" value="{{ viewing_date|date:'Y-m-d' }}">
+    <label><span>🔎 Search</span><input name="q" value="{{ event_query }}" placeholder="Search booking, customer or description"></label>
+    <label><span>Event Type</span><select name="type"><option value="">All Events</option>{% for value,label in event_type_choices %}<option value="{{ value }}"{% if selected_event_type == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+    <label><span>Source</span><select name="source"><option value="">All Sources</option>{% for value,label in event_source_choices %}<option value="{{ value }}"{% if selected_event_source == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+    <button class="history-primary-button" type="submit">Filter</button>
+  </form>
+
+  <div class="history-table-card event-history-card"><div class="history-table-wrap"><table class="history-table">
+    <thead><tr><th>Timestamp</th><th>Type</th><th>Source</th><th>Description</th><th>Relations</th></tr></thead>
+    <tbody>{% for event in page_obj %}<tr><td><span class="timestamp-stack">{{ event.timestamp|date:"d M Y" }}<small>{{ event.timestamp|time:"h:i A" }}</small></span></td><td>{% include "back1/partials/event_type_badge.html" with event=event %}</td><td><span class="source-pill">{{ event.source }}</span></td><td class="event-description">{{ event.description }}</td><td class="relation-cell">{% if event.booking %}Booking #{{ event.booking.id }} · {{ event.booking.user.username }} {% endif %}{% if event.parking_slot %}{{ event.parking_slot }} {% endif %}{% if event.sensor %}{{ event.sensor.sensor_id }} {% endif %}{% if event.gate %}{{ event.gate.gate_name }}{% endif %}</td></tr>{% empty %}<tr><td colspan="5"><div class="history-empty"><span>⚡</span>{% if has_events_for_date %}<strong>No events match the selected filters.</strong><p>Try changing or clearing one of the filters.</p>{% else %}<strong>No system activity recorded for this date.</strong><p>Operational events will appear here when recorded.</p>{% endif %}</div></td></tr>{% endfor %}</tbody>
+  </table></div></div>
+  <nav class="history-pagination" aria-label="Event log pagination">{% if page_obj.has_previous %}<a href="?date={{ viewing_date|date:'Y-m-d' }}&q={{ event_query|urlencode }}&type={{ selected_event_type }}&source={{ selected_event_source }}&page={{ page_obj.previous_page_number }}">← Previous</a>{% else %}<span></span>{% endif %}<strong>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</strong>{% if page_obj.has_next %}<a href="?date={{ viewing_date|date:'Y-m-d' }}&q={{ event_query|urlencode }}&type={{ selected_event_type }}&source={{ selected_event_source }}&page={{ page_obj.next_page_number }}">Next →</a>{% else %}<span></span>{% endif %}</nav>
+</section>
+{% endblock %}

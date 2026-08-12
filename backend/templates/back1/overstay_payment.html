@@ -1,0 +1,17 @@
+{% extends "back1/base.html" %}
+{% block content %}
+<section class="dashboard-card modern-card p-4 mx-auto" style="max-width:700px">
+  <h1 class="h3 text-danger">Overstay Payment Required</h1>
+  <dl class="row mt-4">
+    <dt class="col-6">Booking</dt><dd class="col-6">#{{ booking.id }}</dd>
+    <dt class="col-6">Parking space</dt><dd class="col-6">{{ booking.parking_slot.slot_number }}</dd>
+    <dt class="col-6">Booking ended</dt><dd class="col-6">{{ booking.end_time|time:"H:i" }}</dd>
+    <dt class="col-6">Overstay duration</dt><dd class="col-6">{{ booking.overtime_minutes }} minutes</dd>
+    <dt class="col-6">Rate</dt><dd class="col-6">£{{ rate.overtime_rate_per_hour }}/hour</dd>
+    <dt class="col-6">Overstay amount</dt><dd class="col-6">£{{ booking.overstay_amount }}</dd>
+    <dt class="col-6">Outstanding</dt><dd class="col-6"><strong>£{{ booking.outstanding_balance }}</strong></dd>
+    <dt class="col-6">Wallet</dt><dd class="col-6">£{{ wallet.balance }}</dd>
+  </dl>
+  {% if booking.outstanding_balance %}<form method="post">{% csrf_token %}<button class="btn btn-danger">Pay Outstanding Balance</button></form>{% else %}<p class="text-success">No outstanding balance.</p>{% endif %}
+</section>
+{% endblock %}

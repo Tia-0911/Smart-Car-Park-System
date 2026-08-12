@@ -1,0 +1,42 @@
+{% extends "back1/base.html" %}
+
+{% block content %}
+<section class="modern-card p-4">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+    <h1 class="h3 mb-0">Alerts</h1>
+    <a class="btn btn-outline-primary" href="{% url 'back1:admin-dashboard' %}">Back to Dashboard</a>
+  </div>
+
+  {% for alert in alerts %}
+    <div class="alert {% if alert.acknowledged %}alert-secondary{% elif alert.severity == 'critical' %}alert-danger{% else %}alert-warning{% endif %} d-flex flex-wrap align-items-center justify-content-between gap-3">
+      <div>
+        <strong>{{ alert.get_severity_display }}</strong> — {{ alert.message }}
+        <small class="d-block mt-1">
+          {{ alert.created_at }}{% if alert.sensor %} · Sensor {{ alert.sensor.sensor_id }}{% endif %}
+        </small>
+      </div>
+      {% if alert.acknowledged %}
+        <span class="badge text-bg-secondary">Acknowledged</span>
+      {% else %}
+        <form class="alert-ack-form" method="post" action="{% url 'back1:acknowledge-alert' alert.id %}">
+          {% csrf_token %}
+          <button class="btn btn-sm btn-outline-dark" type="submit">Acknowledge</button>
+        </form>
+      {% endif %}
+    </div>
+  {% empty %}
+    <p class="mb-0 text-muted">No alerts have been recorded.</p>
+  {% endfor %}
+</section>
+
+<script>
+document.querySelectorAll('.alert-ack-form').forEach(form => form.addEventListener('submit', async event => {
+  event.preventDefault();
+  const response = await fetch(form.action, {
+    method: 'POST',
+    headers: {'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value}
+  });
+  if (response.ok) window.location.reload();
+}));
+</script>
+{% endblock %}

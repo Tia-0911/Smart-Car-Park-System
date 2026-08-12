@@ -3,6 +3,360 @@
 
 {% block content %}
 
+<style>
+.viewing-date-bar {
+    display:flex; align-items:center; justify-content:space-between; gap:18px;
+    margin:0 0 22px; padding:16px 20px; border:1px solid #e2e8f0;
+    border-radius:20px; background:#fff; box-shadow:0 8px 24px rgba(15,23,42,.05);
+}
+.viewing-date-controls { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.viewing-date-controls input { padding:7px 10px; border:1px solid #cbd5e1; border-radius:10px; }
+.date-nav-link { padding:7px 11px; border-radius:10px; background:#f1f5f9; color:#475569; font-size:13px; font-weight:700; text-decoration:none; }
+.clickable-dashboard-card { position:relative; transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+.clickable-dashboard-card:hover { transform:translateY(-2px); border-color:#bfdbfe; box-shadow:0 16px 36px rgba(15,23,42,.11); }
+.dashboard-card-link { position:absolute; inset:0; z-index:2; border-radius:inherit; }
+.dashboard-card-link:focus-visible { outline:3px solid #60a5fa; outline-offset:3px; }
+.parking-overview-link { color:inherit; text-decoration:none; cursor:pointer; }
+.parking-overview-link:focus-visible { outline:3px solid #60a5fa; outline-offset:3px; }
+.live-badge { display:inline-flex; padding:4px 8px; border-radius:999px; background:#dcfce7; color:#15803d; font-size:10px; font-weight:800; text-transform:uppercase; }
+.parking-legend .disabled-dot::before,
+.parking-legend .backup-dot::before,
+.parking-legend .maintenance-dot::before,
+.parking-legend .reserved-dot::before {
+    content:""; width:10px; height:10px; margin-right:6px; border-radius:50%; display:inline-block;
+}
+.parking-legend .disabled-dot::before { background:#94a3b8; }
+.parking-legend .backup-dot::before { background:#eab308; }
+.parking-legend .maintenance-dot::before { background:#f97316; }
+.parking-legend .reserved-dot::before { background:#3b82f6; }
+.parking-real-layout .real-slot { border:1px solid transparent; }
+.parking-real-layout .real-slot.available { background:#dcfce7; border-color:#86efac; color:#166534; }
+.parking-real-layout .real-slot.occupied { background:#fee2e2; border-color:#fca5a5; color:#991b1b; }
+.parking-real-layout .real-slot.disabled { background:#f1f5f9; border-color:#cbd5e1; color:#475569; }
+.parking-real-layout .real-slot.backup { background:#fef9c3; border-color:#fde047; color:#854d0e; }
+.parking-real-layout .real-slot.maintenance { background:#ffedd5; border-color:#fdba74; color:#9a3412; }
+.parking-real-layout .real-slot.reserved { background:#dbeafe; border-color:#93c5fd; color:#1e40af; }
+.parking-real-layout .parking-gate {
+    border:1px solid transparent;
+    transition:background-color .2s ease, border-color .2s ease, color .2s ease;
+}
+.parking-real-layout .parking-gate.gate-closed { background:#dcfce7; border-color:#86efac; color:#166534; }
+.parking-real-layout .parking-gate.gate-open { background:#fee2e2; border-color:#fca5a5; color:#991b1b; }
+.parking-gate .overview-gate-status { margin-top:7px; font-size:12px; font-weight:800; }
+.lower-overview-grid {
+    display:grid;
+    width:100%;
+    max-width:none;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    grid-auto-rows:auto;
+    gap:24px;
+    margin-top:30px;
+    align-items:stretch;
+}
+
+.lower-overview-grid > .dashboard-card {
+    width:100%;
+    min-width:0;
+    min-height:0;
+    height:100%;
+    padding:26px 28px;
+    grid-column:auto;
+    box-sizing:border-box;
+    overflow:hidden;
+    border:1px solid rgba(226,232,240,.72);
+    border-radius:26px;
+    background:#fff;
+    box-shadow:0 14px 36px rgba(15,23,42,.07);
+}
+
+.lower-overview-grid .section-header {
+    margin-bottom:18px;
+}
+
+.lower-overview-grid .section-header h3 {
+    margin:0;
+    color:#172033;
+    font-size:21px;
+    font-weight:800;
+    line-height:1.3;
+}
+
+.lower-overview-grid .emergency-status.normal {
+    padding:13px 16px;
+    margin-bottom:14px;
+    border-radius:18px;
+    border:1px solid #bbf7d0;
+    background:#ecfdf3;
+    color:#166534;
+    text-align:center;
+    font-weight:800;
+}
+
+.lower-overview-grid .emergency-status.danger {
+    padding:12px 16px;
+    margin-bottom:12px;
+    border-radius:18px;
+    background:#fee2e2;
+    color:#b91c1c;
+    text-align:center;
+    font-weight:700;
+}
+
+.lower-overview-grid .emergency-sensor-grid {
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:10px;
+}
+
+.lower-overview-grid .emergency-sensor-item {
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    min-width:0;
+    min-height:98px;
+    padding:12px;
+    border:1px solid #bbf7d0;
+    border-radius:14px;
+    background:linear-gradient(145deg, #f0fdf4, #ecfdf5);
+    color:#166534;
+    box-shadow:0 4px 12px rgba(22, 101, 52, .06);
+    text-align:center;
+}
+
+.lower-overview-grid .emergency-sensor-item.is-problem {
+    border-color:#fecaca;
+    background:linear-gradient(145deg, #fff1f2, #fef2f2);
+    color:#b91c1c;
+    box-shadow:0 4px 12px rgba(185, 28, 28, .06);
+}
+
+.lower-overview-grid .emergency-sensor-name {
+    display:block;
+    overflow:hidden;
+    font-size:12.5px;
+    font-weight:700;
+    line-height:1.25;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+
+.lower-overview-grid .emergency-sensor-value {
+    display:block;
+    margin-top:7px;
+    font-size:15px;
+    font-weight:800;
+    line-height:1.2;
+}
+
+.lower-overview-grid .emergency-sensor-state {
+    display:block;
+    margin-top:4px;
+    font-size:11px;
+    font-weight:800;
+    line-height:1.1;
+    letter-spacing:.04em;
+}
+
+.lower-overview-grid .sensor-status-pill {
+    align-self:center;
+    padding:4px 9px;
+    border-radius:999px;
+    background:#dcfce7;
+    color:#15803d;
+}
+
+.lower-overview-grid .is-problem .sensor-status-pill {
+    background:#fee2e2;
+    color:#b91c1c;
+}
+
+.lower-overview-grid .parking-sensor-summary {
+    counter-reset:failed-parking;
+}
+
+.lower-overview-grid .parking-failed-counter {
+    position:absolute;
+    width:0;
+    height:0;
+    overflow:hidden;
+    counter-increment:failed-parking;
+}
+
+.lower-overview-grid .parking-failed-summary::before {
+    content:"🔴 " counter(failed-parking) " FAILED";
+}
+
+.lower-overview-grid .emergency-message {
+    padding:16px 18px;
+    margin-bottom:14px;
+    border-radius:18px;
+}
+
+.lower-overview-grid .alert-list {
+    padding:8px 14px;
+    border-radius:18px;
+}
+
+.lower-overview-grid .alert-list div {
+    padding:9px 0;
+}
+
+.lower-overview-grid .system-row {
+    min-height:65px;
+    padding:11px 2px;
+    border-bottom:1px solid #edf2f7;
+}
+
+.lower-overview-grid .system-service {
+    display:flex;
+    align-items:center;
+    gap:12px;
+    color:#334155;
+    font-weight:700;
+}
+
+.lower-overview-grid .service-icon,
+.lower-overview-grid .activity-icon,
+.lower-overview-grid .booking-space-badge {
+    display:grid;
+    flex:0 0 auto;
+    width:38px;
+    height:38px;
+    place-items:center;
+    border-radius:12px;
+    background:#eff6ff;
+    color:#2563eb;
+    font-size:16px;
+    font-weight:800;
+}
+
+.lower-overview-grid .online-badge {
+    padding:6px 11px;
+    border-radius:999px;
+    background:#dcfce7;
+    color:#15803d;
+}
+
+.lower-overview-grid .booking-card .activity-item {
+    padding:9px 0;
+}
+
+.lower-overview-grid .booking-card .activity-item p {
+    margin-top:2px;
+    line-height:1.25;
+}
+
+.lower-overview-grid .booking-card .activity-item small {
+    display:block;
+    margin-top:2px;
+    font-size:12px;
+    line-height:1.25;
+}
+
+.lower-overview-grid .recent-card {
+    min-height:0;
+    display:flex;
+    flex-direction:column;
+}
+
+.lower-overview-grid .recent-card .section-header {
+    flex:0 0 auto;
+    margin-bottom:8px;
+    padding-bottom:14px;
+}
+
+.lower-overview-grid .recent-card .activity-item {
+    min-height:64px;
+    padding:9px 0;
+    gap:12px;
+    border-bottom:1px solid #edf2f7;
+}
+
+.lower-overview-grid .recent-item-main {
+    display:flex;
+    align-items:center;
+    min-width:0;
+    gap:12px;
+}
+
+.lower-overview-grid .recent-item-copy {
+    min-width:0;
+}
+
+.lower-overview-grid .recent-item-copy strong {
+    display:block;
+    overflow:hidden;
+    color:#263247;
+    font-size:14px;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+
+.lower-overview-grid .recent-item-copy p {
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+
+.lower-overview-grid .activity-icon {
+    background:#fff7ed;
+    color:#ea580c;
+}
+
+.lower-overview-grid .booking-status.pending { background:#fef3c7; color:#a16207; }
+.lower-overview-grid .booking-status.expired,
+.lower-overview-grid .booking-status.cancelled { background:#fee2e2; color:#b91c1c; }
+.lower-overview-grid .booking-status.completed { background:#e2e8f0; color:#475569; }
+
+.lower-overview-grid .section-link {
+    color:#64748b;
+    font-size:12px;
+    font-weight:700;
+    text-decoration:none;
+}
+
+.lower-overview-grid .section-link:hover { color:#2563eb; }
+
+.lower-overview-grid .empty-state {
+    min-height:120px;
+}
+
+@media (max-width:768px) {
+    .viewing-date-bar { align-items:flex-start; flex-direction:column; }
+    .lower-overview-grid {
+        grid-template-columns:1fr;
+        grid-template-rows:none;
+        grid-auto-rows:auto;
+        gap:16px;
+    }
+
+    .lower-overview-grid > .dashboard-card {
+        height:auto;
+        overflow:visible;
+    }
+
+    .lower-overview-grid .emergency-sensor-grid {
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+    }
+
+}
+
+@media (max-width:480px) {
+    .lower-overview-grid .emergency-sensor-grid { grid-template-columns:1fr; }
+}
+</style>
+
+{% if active_emergency %}<section class="alert alert-danger"><h2 class="h4">🚨 Active Emergency</h2><p>{{ active_emergency.description }}</p><a class="btn btn-danger" href="{% url 'back1:emergency-notify' active_emergency.id %}">Send Emergency Notification</a></section>{% endif %}
+
+<section class="viewing-date-bar" aria-label="Dashboard viewing date">
+    <div><small>Viewing Date · Daily statistics</small><br><strong>{{ viewing_date|date:"d M Y" }}</strong></div>
+    <div class="viewing-date-controls">
+        <a class="date-nav-link" href="?date={{ viewing_previous_date|date:'Y-m-d' }}">← Previous Day</a>
+        <a class="date-nav-link" href="?date={% now 'Y-m-d' %}">Today</a>
+        <a class="date-nav-link" href="?date={{ viewing_next_date|date:'Y-m-d' }}">Next Day →</a>
+        <form method="get"><label class="visually-hidden" for="viewing-date">Viewing Date</label><input id="viewing-date" name="date" type="date" value="{{ viewing_date|date:'Y-m-d' }}"><button class="date-nav-link border-0" type="submit">View</button></form>
+    </div>
+</section>
 
 <!-- ================= SUMMARY CARDS ================= -->
 
@@ -12,7 +366,9 @@
 
     <!-- TOTAL SLOTS -->
 
-    <div class="summary-card modern-card">
+    <div class="summary-card modern-card clickable-dashboard-card">
+
+        <a class="dashboard-card-link" href="{% url 'admin:back1_parkingslot_changelist' %}" aria-label="View all parking spaces"></a>
 
 
         <div class="summary-icon">
@@ -27,11 +383,12 @@
 
             <small>
                 Total Slots
+                <span class="live-badge">Live</span>
             </small>
 
 
             <h2>
-                {{ total_slots|default:6 }}
+                {{ total_slots }}
             </h2>
 
 
@@ -52,7 +409,9 @@
     <!-- AVAILABLE -->
 
 
-    <div class="summary-card modern-card">
+    <div class="summary-card modern-card clickable-dashboard-card">
+
+        <a class="dashboard-card-link" href="{% url 'admin:back1_parkingslot_changelist' %}?status__exact=available" aria-label="View available parking spaces"></a>
 
 
         <div class="summary-icon green">
@@ -68,13 +427,14 @@
 
             <small>
                 Available
+                <span class="live-badge">Live</span>
             </small>
 
 
 
             <h2 class="green-text">
 
-                {{ available_slots|default:3 }}
+                {{ available_slots }}
 
             </h2>
 
@@ -90,7 +450,7 @@
             <div class="mini-progress">
 
 
-                <div class="available-progress">
+                <div class="available-progress" style="width:{{ availability_percentage }}%;" role="progressbar" aria-valuenow="{{ availability_percentage }}" aria-valuemin="0" aria-valuemax="100">
 
                 </div>
 
@@ -101,7 +461,7 @@
 
             <span class="percentage-text">
 
-                50% Available
+                {{ availability_percentage }}% Available
 
             </span>
 
@@ -123,7 +483,9 @@
     <!-- OCCUPIED -->
 
 
-    <div class="summary-card modern-card">
+    <div class="summary-card modern-card clickable-dashboard-card">
+
+        <a class="dashboard-card-link" href="{% url 'admin:back1_parkingslot_changelist' %}?status__exact=occupied" aria-label="View occupied parking spaces"></a>
 
 
         <div class="summary-icon red">
@@ -139,13 +501,14 @@
 
             <small>
                 Occupied
+                <span class="live-badge">Live</span>
             </small>
 
 
 
             <h2 class="red-text">
 
-                {{ occupied_slots|default:3 }}
+                {{ occupied_slots }}
 
             </h2>
 
@@ -160,7 +523,7 @@
             <div class="mini-progress">
 
 
-                <div class="occupied-progress">
+                <div class="occupied-progress" style="width:{{ occupancy_percentage }}%;" role="progressbar" aria-valuenow="{{ occupancy_percentage }}" aria-valuemin="0" aria-valuemax="100">
 
                 </div>
 
@@ -171,7 +534,7 @@
 
             <span class="percentage-text">
 
-                50% Occupied
+                {{ occupancy_percentage }}% Occupied
 
             </span>
 
@@ -192,7 +555,9 @@
     <!-- BOOKINGS -->
 
 
-    <div class="summary-card modern-card">
+    <div class="summary-card modern-card clickable-dashboard-card">
+
+        <a class="dashboard-card-link" href="{% url 'back1:admin-bookings' %}?date={{ viewing_date|date:'Y-m-d' }}" aria-label="View active bookings for {{ viewing_date|date:'d M Y' }}"></a>
 
 
         <div class="summary-icon purple">
@@ -214,7 +579,7 @@
 
             <h2>
 
-                {{ booking_count|default:5 }}
+                {{ booking_count }}
 
             </h2>
 
@@ -254,6 +619,13 @@
 
 <!-- ================= REVENUE ================= -->
 
+<style>
+    .clickable-revenue-card { transition: transform .18s ease, box-shadow .18s ease; cursor: pointer; }
+    .clickable-revenue-card:hover,
+    .clickable-revenue-card:focus-visible { transform: translateY(-3px); box-shadow: 0 14px 30px rgba(15, 23, 42, .12); }
+    .clickable-revenue-card:focus-visible { outline: 3px solid rgba(13, 110, 253, .3); outline-offset: 3px; }
+</style>
+
 
 <div class="revenue-grid">
 
@@ -262,7 +634,7 @@
     <!-- TOTAL REVENUE -->
 
 
-    <div class="revenue-card modern-card total-revenue">
+    <a class="revenue-card modern-card total-revenue text-decoration-none text-reset clickable-revenue-card" href="{% url 'back1:admin-revenue' %}?date={{ viewing_date|date:'Y-m-d' }}&type=all" aria-label="View total revenue history for {{ viewing_date|date:'d M Y' }}">
 
 
         <div class="revenue-icon">
@@ -296,7 +668,7 @@
 
             <span class="revenue-up">
 
-                ↑ 12% today
+                Recorded transactions
 
             </span>
 
@@ -305,7 +677,7 @@
 
 
 
-    </div>
+    </a>
 
 
 
@@ -318,7 +690,7 @@
     <!-- PARKING REVENUE -->
 
 
-    <div class="revenue-card modern-card parking-revenue">
+    <a class="revenue-card modern-card parking-revenue text-decoration-none text-reset clickable-revenue-card" href="{% url 'back1:admin-revenue' %}?date={{ viewing_date|date:'Y-m-d' }}&type=parking" aria-label="View parking revenue history for {{ viewing_date|date:'d M Y' }}">
 
 
         <div class="revenue-icon green">
@@ -363,7 +735,7 @@
 
 
 
-    </div>
+    </a>
 
 
 
@@ -376,7 +748,7 @@
     <!-- PENALTY REVENUE -->
 
 
-    <div class="revenue-card modern-card penalty-revenue">
+    <a class="revenue-card modern-card penalty-revenue text-decoration-none text-reset clickable-revenue-card" href="{% url 'back1:admin-revenue' %}?date={{ viewing_date|date:'Y-m-d' }}&type=penalty" aria-label="View penalty revenue history for {{ viewing_date|date:'d M Y' }}">
 
 
         <div class="revenue-icon red">
@@ -410,7 +782,7 @@
 
             <span class="revenue-warning">
 
-                2 penalties
+                Paid overstay charges
 
             </span>
 
@@ -420,7 +792,7 @@
 
 
 
-    </div>
+    </a>
 
 
 
@@ -440,8 +812,6 @@
             🅿️ Parking Lot Overview
         </h3>
 
-
-
         <div class="parking-legend">
 
 
@@ -457,6 +827,11 @@
                 Occupied
 
             </span>
+
+            <span class="legend disabled-dot">Disabled</span>
+            <span class="legend backup-dot">Backup</span>
+            <span class="legend maintenance-dot">Maintenance</span>
+            <span class="legend reserved-dot">Reserved</span>
 
 
         </div>
@@ -478,7 +853,7 @@
         <!-- Entrance -->
 
 
-        <div class="parking-gate">
+        <a class="parking-gate parking-overview-link {% if entrance_gate and entrance_gate.is_open %}gate-open{% else %}gate-closed{% endif %}" data-overview-gate="entrance" href="{% if entrance_gate %}{% url 'admin:back1_gate_change' entrance_gate.id %}{% else %}{% url 'admin:back1_gate_changelist' %}{% endif %}" aria-label="View Entrance Gate details">
 
 
             <div class="gate-icon">
@@ -492,8 +867,10 @@
                 Entrance
             </span>
 
+            <span class="overview-gate-status">{% if entrance_gate and entrance_gate.is_open %}🔴 OPEN{% else %}🟢 CLOSED{% endif %}</span>
 
-        </div>
+
+        </a>
 
 
 
@@ -511,13 +888,7 @@
 
         {% for slot in parking_slots %}
 
-        <div class="real-slot 
-        {% if slot.status == 'occupied' %}
-        occupied
-        {% else %}
-        available
-        {% endif %}
-        ">
+        <a class="real-slot parking-overview-link {{ slot.status }}" href="{% url 'admin:back1_parkingslot_change' slot.id %}" data-slot-number="{{ slot.slot_number }}" data-slot-status="{{ slot.status }}" aria-label="View parking space {{ slot.slot_number }} details">
 
 
         <strong>
@@ -529,11 +900,11 @@
 
 
         <span>
-        {{ slot.status|title }}
+        {% if slot.status == "backup" %}Backup{% else %}{{ slot.get_status_display }}{% endif %}
         </span>
 
 
-        </div>
+        </a>
 
 
         {% endfor %}
@@ -549,7 +920,7 @@
         <!-- Exit -->
 
 
-        <div class="parking-gate">
+        <a class="parking-gate parking-overview-link {% if exit_gate and exit_gate.is_open %}gate-open{% else %}gate-closed{% endif %}" data-overview-gate="exit" href="{% if exit_gate %}{% url 'admin:back1_gate_change' exit_gate.id %}{% else %}{% url 'admin:back1_gate_changelist' %}{% endif %}" aria-label="View Exit Gate details">
 
 
             <div class="gate-icon">
@@ -563,8 +934,10 @@
                 Exit
             </span>
 
+            <span class="overview-gate-status">{% if exit_gate and exit_gate.is_open %}🔴 OPEN{% else %}🟢 CLOSED{% endif %}</span>
 
-        </div>
+
+        </a>
 
 
 
@@ -618,7 +991,7 @@
         <!-- Entrance Gate -->
 
 
-        <div class="gate-box">
+        <div class="gate-box" data-control-gate="entrance">
 
 
 
@@ -631,12 +1004,12 @@
 
             {% if entrance_gate and entrance_gate.is_open %}
 
-            <div class="gate-image gate-image-open">
+            <div class="gate-image gate-image-open" data-gate-image>
                 <i class="bi bi-door-open-fill" aria-hidden="true"></i>
                 <span>Gate Open</span>
             </div>
 
-            <div class="gate-status open">
+            <div class="gate-status open" data-gate-status>
 
                 <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
                 Open — Caution
@@ -645,12 +1018,12 @@
 
             {% else %}
 
-            <div class="gate-image gate-image-closed">
+            <div class="gate-image gate-image-closed" data-gate-image>
                 <i class="bi bi-door-closed-fill" aria-hidden="true"></i>
                 <span>Gate Closed</span>
             </div>
 
-            <div class="gate-status closed">
+            <div class="gate-status closed" data-gate-status>
 
                 <i class="bi bi-shield-check" aria-hidden="true"></i>
                 Closed — Safe
@@ -669,14 +1042,14 @@
                 {% if entrance_gate %}
                 <form class="gate-action-form" method="post" action="{% url 'back1:open_gate' entrance_gate.id %}">
                     {% csrf_token %}
-                    <button type="submit" class="open-gate-btn" {% if entrance_gate.is_open %}disabled{% endif %}>
+                    <button type="submit" class="open-gate-btn" data-gate-action="open" {% if entrance_gate.is_open %}disabled{% endif %}>
                         OPEN GATE
                     </button>
                 </form>
 
                 <form class="gate-action-form" method="post" action="{% url 'back1:close_gate' entrance_gate.id %}">
                     {% csrf_token %}
-                    <button type="submit" class="close-gate-btn" {% if not entrance_gate.is_open %}disabled{% endif %}>
+                    <button type="submit" class="close-gate-btn" data-gate-action="close" {% if not entrance_gate.is_open %}disabled{% endif %}>
                         CLOSE
                     </button>
                 </form>
@@ -703,7 +1076,7 @@
         <!-- Exit Gate -->
 
 
-        <div class="gate-box">
+        <div class="gate-box" data-control-gate="exit">
 
 
 
@@ -717,12 +1090,12 @@
 
             {% if exit_gate and exit_gate.is_open %}
 
-            <div class="gate-image gate-image-open">
+            <div class="gate-image gate-image-open" data-gate-image>
                 <i class="bi bi-door-open-fill" aria-hidden="true"></i>
                 <span>Gate Open</span>
             </div>
 
-            <div class="gate-status open">
+            <div class="gate-status open" data-gate-status>
 
                 <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
                 Open — Caution
@@ -731,12 +1104,12 @@
 
             {% else %}
 
-            <div class="gate-image gate-image-closed">
+            <div class="gate-image gate-image-closed" data-gate-image>
                 <i class="bi bi-door-closed-fill" aria-hidden="true"></i>
                 <span>Gate Closed</span>
             </div>
 
-            <div class="gate-status closed">
+            <div class="gate-status closed" data-gate-status>
 
                 <i class="bi bi-shield-check" aria-hidden="true"></i>
                 Closed — Safe
@@ -756,14 +1129,14 @@
                 {% if exit_gate %}
                 <form class="gate-action-form" method="post" action="{% url 'back1:open_gate' exit_gate.id %}">
                     {% csrf_token %}
-                    <button type="submit" class="open-gate-btn" {% if exit_gate.is_open %}disabled{% endif %}>
+                    <button type="submit" class="open-gate-btn" data-gate-action="open" {% if exit_gate.is_open %}disabled{% endif %}>
                         OPEN GATE
                     </button>
                 </form>
 
                 <form class="gate-action-form" method="post" action="{% url 'back1:close_gate' exit_gate.id %}">
                     {% csrf_token %}
-                    <button type="submit" class="close-gate-btn" {% if not exit_gate.is_open %}disabled{% endif %}>
+                    <button type="submit" class="close-gate-btn" data-gate-action="close" {% if not exit_gate.is_open %}disabled{% endif %}>
                         CLOSE
                     </button>
                 </form>
@@ -797,135 +1170,18 @@
 <!-- ================= SENSOR / EMERGENCY / SYSTEM ================= -->
 
 
-<div class="status-grid">
+<div class="lower-overview-grid">
 
 
 
-
-
-<!-- ================= SENSOR STATUS ================= -->
-
-
-<div class="dashboard-card modern-card">
-
-
-
-    <div class="section-header">
-
-
-        <h3>
-            📡 Sensor Status
-        </h3>
-
-
-        <span class="live-status">
-
-            ● Live Monitoring
-
-        </span>
-
-
-    </div>
-
-    <!-- Ultrasonic Sensor -->
-
-    <div class="sensor-status-item">
-
-        <div>
-
-            <h4>
-                Ultrasonic Sensor
-            </h4>
-
-            <p>
-                Parking slot detection
-            </p>
-
-            <small>
-                Updated 2 seconds ago
-            </small>
-
-        </div>
-
-
-        <span class="online-badge">
-
-            🟢 Online
-
-        </span>
-
-    </div>
-
-
-
-    <!-- IR Sensor -->
-
-    <div class="sensor-status-item">
-
-        <div>
-
-            <h4>
-                IR Sensor
-            </h4>
-
-            <p>
-                Vehicle detection
-            </p>
-
-            <small>
-                Updated 2 seconds ago
-            </small>
-
-        </div>
-
-
-        <span class="online-badge">
-
-            🟢 Online
-
-        </span>
-
-    </div>
-
-
-
-
-    <!-- Temperature Sensor -->
-
-    <div class="sensor-status-item">
-
-        <div>
-
-            <h4>
-                Temperature Sensor
-            </h4>
-
-            <p>
-                Environment monitoring
-            </p>
-
-            <small>
-                25°C detected
-            </small>
-
-        </div>
-
-
-        <span class="online-badge">
-
-            🟢 Normal
-
-        </span>
-
-    </div>
-
-</div> 
 
 
 <!-- ================= EMERGENCY ALERT ================= -->
 
 
-<div class="dashboard-card modern-card">
+<div class="dashboard-card modern-card clickable-dashboard-card" id="alerts">
+
+    <a class="dashboard-card-link" href="{% url 'back1:admin-sensors' %}" aria-label="View detailed sensor status"></a>
 
 
 
@@ -936,40 +1192,7 @@
             🚨 Emergency Alert
         </h3>
 
-
-
-    </div>
-
-
-
-
-
-
-    <div class="emergency-status normal">
-
-
-        🟢 No Active Emergency
-
-
-    </div>
-
-
-
-
-
-
-
-    <div class="emergency-message">
-
-
-        <h4>
-            System is operating normally
-        </h4>
-
-
-        <p>
-            All sensors and gates are functioning correctly.
-        </p>
+        <span class="live-badge">Live</span>
 
 
 
@@ -980,50 +1203,48 @@
 
 
 
+    <div id="emergency-status-banner" class="emergency-status {% if sensor_issues or active_emergency %}danger{% else %}normal{% endif %}">
 
-    <div class="alert-list">
+
+        {% if sensor_issues %}🔴 {{ sensor_issue_count }} Active Issue{{ sensor_issue_count|pluralize }}{% elif active_emergency %}🔴 EMERGENCY — {{ active_emergency.description }}{% else %}🟢 No Active Emergency{% endif %}
 
 
-        <div>
+    </div>
 
-            🔥 Fire Detection
+    <div class="emergency-sensor-grid">
+        {% for row in sensor_rows %}
+        {% if row.sensor_type != "parking" %}
+        <div class="emergency-sensor-item{% if row.failed or row.abnormal %} is-problem{% endif %}" data-sensor-id="{{ row.sensor_id }}" title="{{ row.name }} — {{ row.health_label }}">
+            <span class="emergency-sensor-name">{{ row.icon }} {{ row.name }}</span>
 
-            <span>
-                Normal
-            </span>
-
+            {% if row.sensor_type == "temperature" or row.sensor_type == "humidity" %}
+                <span class="emergency-sensor-value sensor-live-value">{{ row.value_display|default:"—" }}</span>
+                <span class="emergency-sensor-state sensor-status-pill sensor-live-status">{% if not row.last_update %}NO DATA{% elif row.failed or row.abnormal %}🔴 UNSAFE{% else %}🟢 SAFE{% endif %}</span>
+            {% elif row.sensor_type == "fire" %}
+                <span class="emergency-sensor-value sensor-live-value">{{ row.value_display|default:"—" }}</span>
+                <span class="emergency-sensor-state sensor-status-pill sensor-live-status">{% if not row.last_update %}NO DATA{% elif row.failed %}🔴 FAILED{% elif row.abnormal %}🔴 DANGER{% else %}🟢 SAFE{% endif %}</span>
+            {% else %}
+                <span class="emergency-sensor-value sensor-status-pill sensor-live-status">{% if row.failed or row.abnormal %}🔴 FAILED{% else %}🟢 NORMAL{% endif %}</span>
+            {% endif %}
         </div>
+        {% endif %}
+        {% endfor %}
 
-
-
-
-        <div>
-
-            📡 Sensor Failure
-
-            <span>
-                No Issue
-            </span>
-
+        <div id="parking-sensor-summary" class="emergency-sensor-item parking-sensor-summary{% if sensor_rows.3.failed or sensor_rows.3.abnormal or sensor_rows.4.failed or sensor_rows.4.abnormal or sensor_rows.5.failed or sensor_rows.5.abnormal or sensor_rows.6.failed or sensor_rows.6.abnormal or sensor_rows.7.failed or sensor_rows.7.abnormal or sensor_rows.8.failed or sensor_rows.8.abnormal %} is-problem{% endif %}">
+            <span class="emergency-sensor-name">🚗 Parking Sensors A01–A06</span>
+            {% for row in sensor_rows %}
+                {% if row.sensor_type == "parking" and row.failed or row.sensor_type == "parking" and row.abnormal %}<span class="parking-failed-counter" aria-hidden="true"></span>{% endif %}
+            {% endfor %}
+            {% if sensor_rows.3.failed or sensor_rows.3.abnormal or sensor_rows.4.failed or sensor_rows.4.abnormal or sensor_rows.5.failed or sensor_rows.5.abnormal or sensor_rows.6.failed or sensor_rows.6.abnormal or sensor_rows.7.failed or sensor_rows.7.abnormal or sensor_rows.8.failed or sensor_rows.8.abnormal %}
+                <span class="emergency-sensor-value sensor-status-pill parking-live-status parking-failed-summary"></span>
+            {% else %}
+                <span class="emergency-sensor-value sensor-status-pill parking-live-status">🟢 ALL NORMAL</span>
+            {% endif %}
         </div>
-
-
-
-
-
-        <div>
-
-            🚧 Gate Failure
-
-            <span>
-                No Issue
-            </span>
-
-        </div>
-
-
-
     </div>
+
+
+
 
 
 
@@ -1052,6 +1273,8 @@
             ⚙️ System Status
         </h3>
 
+        <span class="live-badge">Live</span>
+
 
     </div>
 
@@ -1064,8 +1287,8 @@
     <div class="system-row">
 
 
-        <span>
-            Backend API
+        <span class="system-service">
+            <span class="service-icon">⚙️</span> Backend API
         </span>
 
 
@@ -1087,8 +1310,8 @@
     <div class="system-row">
 
 
-        <span>
-            Database
+        <span class="system-service">
+            <span class="service-icon">🗄️</span> Database
         </span>
 
 
@@ -1110,8 +1333,8 @@
     <div class="system-row">
 
 
-        <span>
-            Cloud Server
+        <span class="system-service">
+            <span class="service-icon">☁️</span> Cloud Server
         </span>
 
 
@@ -1133,8 +1356,8 @@
     <div class="system-row">
 
 
-        <span>
-            IoT Connection
+        <span class="system-service">
+            <span class="service-icon">📡</span> IoT Connection
         </span>
 
 
@@ -1149,9 +1372,6 @@
 
 </div>
 
-<!-- Close the three-column sensor / emergency / system status grid. -->
-</div>
-
 <!-- ================= RECENTLY BOOKING ================= -->
 
 
@@ -1159,13 +1379,12 @@
 
     
 
-    <div class="recent-grid">
-
-
     <!-- Recently Booking -->
 
 
-    <div class="dashboard-card modern-card recent-card booking-card">
+    <div class="dashboard-card modern-card recent-card booking-card clickable-dashboard-card">
+
+        <a class="dashboard-card-link" href="{% url 'back1:admin-bookings' %}?date={{ viewing_date|date:'Y-m-d' }}" aria-label="View booking history for {{ viewing_date|date:'d M Y' }}"></a>
 
 
         <div class="section-header">
@@ -1175,40 +1394,26 @@
                 🚗 Recently Booking
             </h3>
 
-
         </div>
 
 
 
-        {% for booking in recent_bookings %}
+        {% for booking in recent_bookings|slice:":4" %}
 
 
         <div class="activity-item">
 
-
-            <div>
-
-
-                <strong>
-                    {{ booking.parking_slot.slot_number }}
-                </strong>
-
-
-                <p>
-                    {{ booking.user.username }}
-                </p>
-
-
-                <small>
-                    {{ booking.created_at }}
-                </small>
-
-
+            <div class="recent-item-main">
+                <span class="booking-space-badge">{{ booking.parking_slot.slot_number }}</span>
+                <div class="recent-item-copy">
+                    <strong>{{ booking.user.username }}</strong>
+                    <small>{{ booking.created_at }}</small>
+                </div>
             </div>
 
 
 
-            <span class="online-badge">
+            <span class="online-badge booking-status {{ booking.status }}">
 
                 {{ booking.status|title }}
 
@@ -1238,7 +1443,9 @@
     <!-- Recently Activity -->
 
 
-    <div class="dashboard-card modern-card recent-card activity-card">
+    <div class="dashboard-card modern-card recent-card activity-card clickable-dashboard-card">
+
+        <a class="dashboard-card-link" href="{% url 'back1:admin-events' %}?date={{ viewing_date|date:'Y-m-d' }}" aria-label="View activity history for {{ viewing_date|date:'d M Y' }}"></a>
 
 
         <div class="section-header">
@@ -1248,44 +1455,30 @@
                 ⚡ Recently Activity
             </h3>
 
-
         </div>
 
 
 
 
 
-        {% for activity in recent_activities %}
+        {% for activity in recent_activities|slice:":4" %}
 
 
         <div class="activity-item">
 
-
-            <div>
-
-
-                <strong>
-
-                    {{ activity.transaction_type|title }}
-
-                </strong>
-
-
-
-                <p>
-
-                    £{{ activity.amount }}
-
-                </p>
-
-
+            <div class="recent-item-main">
+                <span class="activity-icon">⚡</span>
+                <div class="recent-item-copy">
+                    {% include "back1/partials/event_type_badge.html" with event=activity %}
+                    <p>{{ activity.description }}</p>
+                </div>
             </div>
 
 
 
             <small>
 
-                {{ activity.created_at|timesince }} ago
+                {{ activity.timestamp|timesince }} ago
 
             </small>
 
@@ -1314,68 +1507,86 @@
     
 
 
- <!-- Payment & Penalty -->
-
-
-    <div class="dashboard-card modern-card recent-card payment-card">
-
-        <div class="section-header">
-            <h3>
-                💰 Payment & Penalty
-            </h3>
-        </div>
-
-
-        <h4>Recent Payments</h4>
-
-        <div class="activity-item">
-            <div>
-                <strong>Booking #001</strong>
-                <p>Customer: John</p>
-            </div>
-
-            <span class="online-badge">
-                £5 Paid
-            </span>
-        </div>
-
-
-        <div class="activity-item">
-            <div>
-                <strong>Booking #002</strong>
-                <p>Customer: Anna</p>
-            </div>
-
-            <span class="online-badge">
-                £8 Paid
-            </span>
-        </div>
-
-
-
-        <h4>Recent Penalties</h4>
-
-
-        <div class="activity-item">
-
-            <div>
-                <strong>Tom Brown</strong>
-                <p>Overtime Parking</p>
-            </div>
-
-            <span class="online-badge">
-                £10
-            </span>
-
-        </div>
-
-
-    </div>
-
-
 </div>
 
 <script>
+(() => {
+    const endpoint = "{% url 'back1:dashboard_sensor_status' %}";
+    const statusText = (status) => status === "NO DATA" ? "NO DATA" : `${status === "SAFE" || status === "NORMAL" ? "🟢" : "🔴"} ${status}`;
+    const refreshEmergencyStatus = async () => {
+        try {
+            const response = await fetch(endpoint, {headers:{"Accept":"application/json"}});
+            if (!response.ok) return;
+            const responseData = await response.json();
+            const payload = responseData.dashboard;
+            if (!payload) return;
+
+            const banner = document.getElementById("emergency-status-banner");
+            banner.textContent = payload.banner;
+            banner.classList.toggle("danger", payload.issue_count > 0);
+            banner.classList.toggle("normal", payload.issue_count === 0);
+
+            payload.sensors.forEach((sensor) => {
+                const tile = document.querySelector(`[data-sensor-id="${sensor.sensor_id}"]`);
+                if (!tile) return;
+                tile.classList.toggle("is-problem", sensor.problem);
+                const value = tile.querySelector(".sensor-live-value");
+                if (value) value.textContent = sensor.value;
+                const status = tile.querySelector(".sensor-live-status");
+                if (status) status.textContent = statusText(sensor.display_status);
+            });
+
+            const parking = document.getElementById("parking-sensor-summary");
+            const parkingStatus = parking?.querySelector(".parking-live-status");
+            if (parking && parkingStatus) {
+                const failed = payload.parking_failed_count;
+                parking.classList.toggle("is-problem", failed > 0);
+                parkingStatus.classList.remove("parking-failed-summary");
+                parkingStatus.textContent = failed ? `🔴 ${failed} FAILED` : "🟢 ALL NORMAL";
+            }
+
+            const lastSync = document.getElementById("last-sync-value");
+            if (lastSync) {
+                lastSync.innerHTML = payload.latest_sync
+                    ? `${payload.latest_sync_time}<br>${payload.latest_sync_date}`
+                    : "No data yet";
+            }
+
+            responseData.gates.forEach((gate) => {
+                const overview = document.querySelector(`[data-overview-gate="${gate.gate_type}"]`);
+                if (overview) {
+                    overview.classList.toggle("gate-open", gate.is_open);
+                    overview.classList.toggle("gate-closed", !gate.is_open);
+                    overview.querySelector(".overview-gate-status").textContent = gate.is_open ? "🔴 OPEN" : "🟢 CLOSED";
+                }
+
+                const control = document.querySelector(`[data-control-gate="${gate.gate_type}"]`);
+                if (!control) return;
+                const image = control.querySelector("[data-gate-image]");
+                const status = control.querySelector("[data-gate-status]");
+                if (image) {
+                    image.className = `gate-image ${gate.is_open ? "gate-image-open" : "gate-image-closed"}`;
+                    image.innerHTML = `<i class="bi ${gate.is_open ? "bi-door-open-fill" : "bi-door-closed-fill"}" aria-hidden="true"></i><span>Gate ${gate.is_open ? "Open" : "Closed"}</span>`;
+                }
+                if (status) {
+                    status.className = `gate-status ${gate.is_open ? "open" : "closed"}`;
+                    status.innerHTML = gate.is_open
+                        ? '<i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> Open — Caution'
+                        : '<i class="bi bi-shield-check" aria-hidden="true"></i> Closed — Safe';
+                }
+                const openButton = control.querySelector('[data-gate-action="open"]');
+                const closeButton = control.querySelector('[data-gate-action="close"]');
+                if (openButton) openButton.disabled = gate.is_open;
+                if (closeButton) closeButton.disabled = !gate.is_open;
+            });
+        } catch (error) {
+            // Preserve the last valid UI state during temporary request failures.
+        }
+    };
+    refreshEmergencyStatus();
+    window.setInterval(refreshEmergencyStatus, 300000);
+})();
+
 document.querySelectorAll(".gate-action-form").forEach((form) => {
     form.addEventListener("submit", async (event) => {
         event.preventDefault();

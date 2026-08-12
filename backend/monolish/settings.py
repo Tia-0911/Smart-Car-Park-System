@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 from dotenv import load_dotenv
 import os
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,16 +26,16 @@ load_dotenv(dotenv_path)
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-ed#%2&w)nm!f%%$q@p&t7ov0+*=uf8&o1fa^t9@-v97jq07von')
+DEBUG = os.getenv("DEBUG", "true").lower() in ("1", "true", "yes")
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    if not DEBUG:
+        raise ImproperlyConfigured("SECRET_KEY must be set when DEBUG is false.")
+    SECRET_KEY = "django-insecure-development-only-change-me"
 
-# SECURITY WARNING: don't run with debug turned on in production!
-websitename = os.getenv('WEBSITE_NAME')
-
-DEBUG = (websitename is None) or os.getenv("DEBUG", "").lower() in ("1", "true", "yes")
-
-ALLOWED_HOSTS = [
-    "*",
-]
+ALLOWED_HOSTS = [host.strip() for host in os.getenv(
+    "ALLOWED_HOSTS", "localhost,127.0.0.1,[::1]"
+).split(",") if host.strip()]
 
 
 # Application definition
@@ -76,6 +77,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'back1.context_processors.customer_wallet',
             ],
         },
     },
@@ -142,9 +144,10 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = DEBUG
 
-CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_CREDENTIALS = os.getenv("CORS_ALLOW_CREDENTIALS", "false").lower() in ("1", "true", "yes")
+CORS_ALLOWED_ORIGINS = [origin.strip() for origin in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",") if origin.strip()]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://c6000041-frontend-evbagdh3fmgngkae.uksouth-01.azurewebsites.net",
@@ -152,3 +155,29 @@ CSRF_TRUSTED_ORIGINS = [
 
 # Login settings
 LOGIN_URL = '/login/'
+LOGOUT_REDIRECT_URL = '/login/'
+
+REST_FRAMEWORK = {
+    # BasicAuthentication is first so unauthenticated API requests receive
+    # HTTP 401, while SessionAuthentication continues to support the website.
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+}
+
+# Safe development default. Real SMTP can be enabled later entirely through
+# environment variables; no credentials are stored in source control.
+EMAIL_BACKEND = os.getenv(
+    "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
+)
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@smartcarpark.local")
+SENSOR_DEVICE_API_KEY = os.getenv("SENSOR_DEVICE_API_KEY", "")
+SENSOR_OFFLINE_SECONDS = int(os.getenv("SENSOR_OFFLINE_SECONDS", "600"))
+GATE_COMMAND_EXPIRY_SECONDS = int(os.getenv("GATE_COMMAND_EXPIRY_SECONDS", "60"))
+
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+SECURE_SSL_REDIRECT = not DEBUG
+SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG

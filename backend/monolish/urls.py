@@ -7,6 +7,7 @@ The `urlpatterns` list routes URLs to views.
 from django.contrib import admin
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
+from back1.views import RoleAwareLoginView
 
 
 urlpatterns = [
@@ -14,10 +15,14 @@ urlpatterns = [
 
     path(
         'login/',
-        auth_views.LoginView.as_view(
-            template_name='registration/login.html'
-        ),
+        RoleAwareLoginView.as_view(),
         name='login'
+    ),
+
+    path(
+        'logout/',
+        auth_views.LogoutView.as_view(),
+        name='logout'
     ),
 
     path('', include('back1.urls')),

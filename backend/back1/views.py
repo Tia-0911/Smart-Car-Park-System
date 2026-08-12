@@ -3,17 +3,32 @@
 # ==========================
 
 from decimal import Decimal
-from django.db.models import Sum
+from datetime import time, timedelta
+import secrets
+import re
+from django.conf import settings
+from django.db.models import Count, Max, Q, Sum
+from django.core.paginator import Paginator
 
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render, redirect
+from django.http import HttpResponseNotAllowed
+from django.contrib.auth import login
+from django.contrib.auth.models import User
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.views import LoginView
 from django.contrib import messages
+from django.core.exceptions import PermissionDenied
 from django.utils import timezone
-from django.views.generic import ListView, CreateView
-from django.urls import reverse_lazy
+from django.utils.dateparse import parse_date, parse_time
+from django.views import View
+from django.views.generic import ListView
+from django.urls import reverse, reverse_lazy
 
 
 from rest_framework.decorators import api_view
+from rest_framework.decorators import permission_classes
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 
@@ -21,11 +36,17 @@ from rest_framework import status
 from .models import (
     ParkingSlot,
     SensorData,
+    SensorReadingHistory,
     Booking,
     Gate,
+    GateCommand,
     Wallet,
     Transaction,
-    Emergency
+    Emergency,
+    SystemEvent,
+    ParkingRate,
+    Alert,
+    EmergencyNotification,
 )
 
 
@@ -39,6 +60,507 @@ from .serializers import (
     EmergencySerializer
 )
 
+from .forms import (
+    BookingForm,
+    AdminBookingForm,
+    AdminCustomerForm,
+    CustomerProfileForm,
+    CustomerRegistrationForm,
+)
+from .services import (
+    CAPACITY_STATUSES,
+    MONITORED_SENSOR_IDS,
+    SENSOR_PRESENTATION,
+    availability,
+    available_parking_spaces,
+    booking_bounds,
+    create_pending_booking,
+    expire_stale_pending_bookings,
+    pay_booking,
+    send_booking_confirmation,
+    pay_overstay,
+    request_customer_gate,
+    sensor_is_detected,
+    sensor_is_online,
+    monitored_sensor_status,
+    update_logical_sensor,
+    process_sensor_alerts,
+    send_emergency_notifications,
+    usable_parking_spaces,
+    cancellation_quote,
+    cancel_customer_booking,
+    booking_range_has_ended,
+    acknowledge_gate_command,
+    claim_gate_command,
+    create_gate_command,
+    expire_gate_commands,
+)
+
+
+def _is_admin(user):
+    return user.is_authenticated and (user.is_staff or user.is_superuser)
+
+
+def _require_admin(request):
+    if not _is_admin(request.user):
+        raise PermissionDenied
+
+
+def _require_customer(request):
+    if _is_admin(request.user):
+        return redirect("back1:admin-dashboard")
+    return None
+
+
+def _device_api_key_is_valid(request):
+    supplied = request.headers.get("X-Device-API-Key", "")
+    expected = settings.SENSOR_DEVICE_API_KEY
+    return bool(
+        supplied and expected and secrets.compare_digest(supplied, expected)
+    )
+
+
+def _viewing_date_context(request):
+    today = timezone.localdate()
+    selected = parse_date(request.GET.get("date", "")) or today
+    return {
+        "viewing_date": selected,
+        "viewing_previous_date": selected - timedelta(days=1),
+        "viewing_next_date": selected + timedelta(days=1),
+        "viewing_is_today": selected == today,
+    }
+
+
+def _daily_revenue(selected_date):
+    parking_transactions = Transaction.objects.filter(
+        transaction_type="payment",
+        payment_category="normal",
+        payment_status="paid",
+        paid_at__date=selected_date,
+    )
+    penalty_transactions = Transaction.objects.filter(
+        transaction_type="penalty",
+        payment_category="overstay",
+        payment_status="paid",
+        paid_at__date=selected_date,
+    )
+    parking_revenue = parking_transactions.aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+    penalty_revenue = penalty_transactions.aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+    return {
+        "parking_transactions": parking_transactions,
+        "penalty_transactions": penalty_transactions,
+        "parking_revenue": parking_revenue,
+        "penalty_revenue": penalty_revenue,
+        "total_revenue": parking_revenue + penalty_revenue,
+    }
+
+
+def _get_authorized_booking(request, booking_id):
+    try:
+        booking = Booking.objects.get(id=booking_id)
+    except Booking.DoesNotExist:
+        return None
+
+    if not _is_admin(request.user) and booking.user_id != request.user.id:
+        raise PermissionDenied
+    return booking
+
+
+class RoleAwareLoginView(LoginView):
+    template_name = "registration/login.html"
+    redirect_authenticated_user = True
+
+    def get_default_redirect_url(self):
+        if _is_admin(self.request.user):
+            return reverse("back1:admin-dashboard")
+        return reverse("back1:customer-dashboard")
+
+
+def root_redirect(request):
+    if not request.user.is_authenticated:
+        return redirect("login")
+    if _is_admin(request.user):
+        return redirect("back1:admin-dashboard")
+    return redirect("back1:customer-dashboard")
+
+
+def register(request):
+    if request.user.is_authenticated:
+        return root_redirect(request)
+
+    if request.method == "POST":
+        form = CustomerRegistrationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            messages.success(request, "Your customer account has been created.")
+            return redirect("back1:customer-dashboard")
+    else:
+        form = CustomerRegistrationForm()
+
+    return render(request, "registration/register.html", {"form": form})
+
+
+@login_required
+def customer_dashboard(request):
+    admin_redirect = _require_customer(request)
+    if admin_redirect:
+        return admin_redirect
+
+    expire_stale_pending_bookings()
+    upcoming_booking = Booking.objects.filter(
+        user=request.user,
+        status__in=["pending", "confirmed", "active", "parked", "overtime"],
+        booking_date__gte=timezone.localdate(),
+    ).order_by("booking_date", "start_time").first()
+
+    entrance_available_from = None
+    ending_soon = False
+    if upcoming_booking:
+        start_dt, end_dt = booking_bounds(upcoming_booking)
+        entrance_available_from = start_dt - timedelta(minutes=5)
+        ending_soon = end_dt - timedelta(minutes=15) <= timezone.now() < end_dt
+
+    return render(
+        request,
+        "back1/customer_dashboard.html",
+        {"upcoming_booking": upcoming_booking, "entrance_available_from": entrance_available_from, "ending_soon": ending_soon},
+    )
+
+
+@login_required
+def profile(request):
+    admin_redirect = _require_customer(request)
+    if admin_redirect:
+        return admin_redirect
+
+    if request.method == "POST":
+        form = CustomerProfileForm(request.POST, instance=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Your profile has been updated.")
+            return redirect("back1:profile")
+    else:
+        form = CustomerProfileForm(instance=request.user)
+
+    return render(request, "back1/profile.html", {"form": form})
+
+
+@login_required
+def my_bookings(request):
+    admin_redirect = _require_customer(request)
+    if admin_redirect:
+        return admin_redirect
+
+    expire_stale_pending_bookings()
+    bookings = list(Booking.objects.filter(user=request.user).select_related(
+        "parking_slot"
+    ).order_by("-booking_date", "-start_time"))
+
+    for booking in bookings:
+        quote = cancellation_quote(booking)
+        booking.can_customer_cancel = quote["can_cancel"]
+        booking.refund_eligible = quote["refundable"]
+        if booking.status == "pending":
+            booking.cancellation_message = "Cancel this unpaid booking? No refund is needed because it has not been paid."
+        elif quote["refundable"]:
+            booking.cancellation_message = f"Cancel this booking? You are eligible for a full refund of £{quote['refund_amount']}."
+        else:
+            booking.cancellation_message = "Cancel this booking? This booking is within 24 hours of the start time and is non-refundable."
+
+    today = timezone.localdate()
+    context = {
+        "upcoming_bookings": [b for b in bookings if b.booking_date >= today and b.status in ["pending", "confirmed"]],
+        "active_bookings": [b for b in bookings if b.status in ["active", "parked"]],
+        "past_bookings": [b for b in bookings if b.status in ["completed", "expired", "no_show", "overtime"]],
+        "cancelled_bookings": [b for b in bookings if b.status == "cancelled"],
+    }
+    return render(request, "back1/my_bookings.html", context)
+
+
+@login_required
+def admin_bookings(request):
+    _require_admin(request)
+    date_context = _viewing_date_context(request)
+    queryset = Booking.objects.filter(booking_date=date_context["viewing_date"]).select_related("user", "parking_slot").order_by("-created_at")
+    query = request.GET.get("q", "").strip()
+    if query:
+        queryset = queryset.filter(Q(user__username__icontains=query) | Q(user__email__icontains=query))
+    if request.GET.get("status"):
+        queryset = queryset.filter(status=request.GET["status"])
+    return render(request, "back1/admin_bookings.html", {"bookings": queryset[:100], "status_choices": Booking.STATUS_CHOICES, **date_context})
+
+
+@login_required
+def admin_booking_edit(request, booking_id):
+    _require_admin(request)
+    booking = get_object_or_404(Booking, pk=booking_id)
+    form = AdminBookingForm(request.POST or None, instance=booking)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        SystemEvent.objects.create(event_type="admin_action", source="admin_booking", description=f"Admin edited Booking #{booking.id}.", user=request.user, booking=booking, parking_slot=booking.parking_slot)
+        messages.success(request, "Booking updated.")
+        return redirect("back1:admin-bookings")
+    return render(request, "back1/admin_form.html", {"title": f"Edit Booking #{booking.id}", "form": form, "object": booking})
+
+
+@login_required
+def admin_booking_delete(request, booking_id):
+    _require_admin(request)
+    booking = get_object_or_404(Booking, pk=booking_id)
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    has_history = booking.transactions.exists() or booking.system_events.exists()
+    if has_history:
+        booking.status = "cancelled"; booking.save(update_fields=["status", "updated_at"])
+        description = f"Admin cancelled Booking #{booking.id}; history preserved."
+    else:
+        description = f"Admin deleted Booking #{booking.id}."
+        booking.delete()
+        booking = None
+    SystemEvent.objects.create(event_type="admin_action", source="admin_booking", description=description, user=request.user, booking=booking)
+    return redirect("back1:admin-bookings")
+
+
+@login_required
+def admin_customers(request):
+    _require_admin(request)
+    customers = User.objects.filter(is_staff=False, is_superuser=False).annotate(booking_count=Count("booking")).order_by("username")
+    return render(request, "back1/admin_customers.html", {"customers": customers})
+
+
+@login_required
+def admin_customer_edit(request, user_id):
+    _require_admin(request)
+    customer = get_object_or_404(User, pk=user_id, is_staff=False, is_superuser=False)
+    form = AdminCustomerForm(request.POST or None, instance=customer)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        SystemEvent.objects.create(event_type="admin_action", source="admin_customer", description=f"Admin updated customer account #{customer.id}.", user=request.user)
+        return redirect("back1:admin-customers")
+    return render(request, "back1/admin_form.html", {"title": f"Edit Customer {customer.username}", "form": form, "object": customer})
+
+
+@login_required
+def admin_customer_delete(request, user_id):
+    _require_admin(request)
+    customer = get_object_or_404(User, pk=user_id, is_staff=False, is_superuser=False)
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    if customer.booking_set.exists() or Transaction.objects.filter(user=customer).exists():
+        customer.is_active = False; customer.save(update_fields=["is_active"])
+        action = "deactivated"
+    else:
+        customer.delete(); action = "deleted"
+    SystemEvent.objects.create(event_type="admin_action", source="admin_customer", description=f"Admin {action} customer account #{user_id}.", user=request.user)
+    return redirect("back1:admin-customers")
+
+
+@login_required
+def admin_events(request):
+    _require_admin(request)
+    date_context = _viewing_date_context(request)
+    query = request.GET.get("q", "").strip()
+    selected_type = request.GET.get("type", "")
+    selected_source = request.GET.get("source", "")
+
+    type_filters = {
+        "vehicle": Q(event_type="vehicle_detected") | Q(source="booking_lifecycle") | Q(source="device_sensor", sensor__sensor_type__in=["entrance", "exit"]),
+        "gate": Q(event_type__in=["gate_opened", "gate_closed"]) | Q(source__in=["customer_gate", "admin_gate", "gate_lifecycle"]),
+        "parking": Q(event_type__in=["space_occupied", "space_available"]) | Q(source="parking_sensor") | Q(source="device_sensor", sensor__sensor_type="parking"),
+        "booking": Q(source__in=["booking_email", "booking_cancellation", "booking_reminder", "admin_booking"]),
+        "payment": Q(event_type="payment") | Q(source__in=["booking_payment", "overstay_payment", "overstay"]) | Q(description__icontains="refund"),
+        "emergency": Q(event_type="emergency") | Q(source__in=["admin_emergency", "emergency_notification"]),
+        "sensor": Q(event_type__in=["sensor_offline", "sensor_online"]) | Q(source__in=["sensor_alert", "sensor_environment", "sensor_recovery", "sensor_safety"]),
+    }
+    source_filters = {
+        "entrance_sensor": Q(source="entrance_sensor"),
+        "exit_sensor": Q(source="exit_sensor"),
+        "parking_sensor": Q(source="parking_sensor"),
+        "customer_gate": Q(source="customer_gate"),
+        "admin_gate": Q(source="admin_gate"),
+        "gate_lifecycle": Q(source="gate_lifecycle"),
+        "booking_system": Q(source__in=["booking_email", "booking_cancellation", "booking_reminder", "admin_booking", "booking_lifecycle"]),
+        "payment_system": Q(source__in=["booking_payment", "overstay_payment", "overstay"]) | Q(event_type="payment"),
+        "emergency_system": Q(source__in=["admin_emergency", "emergency_notification"]) | Q(event_type="emergency"),
+        "sensor_system": Q(source__in=["sensor_alert", "sensor_environment", "sensor_recovery", "sensor_safety", "device_sensor"]),
+    }
+    if selected_type not in type_filters:
+        selected_type = ""
+    if selected_source not in source_filters:
+        selected_source = ""
+
+    daily_events = SystemEvent.objects.filter(timestamp__date=date_context["viewing_date"])
+    has_events_for_date = daily_events.exists()
+    if query:
+        search_filter = (
+            Q(description__icontains=query)
+            | Q(booking__user__username__icontains=query)
+            | Q(booking__user__email__icontains=query)
+            | Q(user__username__icontains=query)
+            | Q(user__email__icontains=query)
+        )
+        booking_match = re.search(r"(?:booking\s*#?\s*)?(\d+)$", query, re.IGNORECASE)
+        if booking_match:
+            search_filter |= Q(booking_id=int(booking_match.group(1)))
+        daily_events = daily_events.filter(search_filter)
+    if selected_type:
+        daily_events = daily_events.filter(type_filters[selected_type])
+    if selected_source:
+        daily_events = daily_events.filter(source_filters[selected_source])
+
+    page = Paginator(
+        daily_events.select_related("booking__user", "user", "parking_slot", "sensor", "gate").order_by("-timestamp"),
+        50,
+    ).get_page(request.GET.get("page"))
+    return render(request, "back1/admin_events.html", {
+        "page_obj": page,
+        "event_query": query,
+        "selected_event_type": selected_type,
+        "selected_event_source": selected_source,
+        "has_events_for_date": has_events_for_date,
+        "event_type_choices": [
+            ("vehicle", "Vehicle"), ("gate", "Gate"), ("parking", "Parking"),
+            ("booking", "Booking"), ("payment", "Payment"),
+            ("emergency", "Emergency"), ("sensor", "Sensor"),
+        ],
+        "event_source_choices": [
+            ("entrance_sensor", "Entrance Sensor"), ("exit_sensor", "Exit Sensor"),
+            ("parking_sensor", "Parking Sensor"), ("customer_gate", "Customer Gate"),
+            ("admin_gate", "Admin Gate"), ("gate_lifecycle", "Gate Lifecycle"),
+            ("booking_system", "Booking System"), ("payment_system", "Payment System"),
+            ("emergency_system", "Emergency System"), ("sensor_system", "Sensor System"),
+        ],
+        **date_context,
+    })
+
+
+@login_required
+def admin_alerts(request):
+    _require_admin(request)
+    alerts = Alert.objects.select_related("sensor", "acknowledged_by").order_by("acknowledged", "-created_at")
+    return render(request, "back1/admin_alerts.html", {"alerts": alerts})
+
+
+@login_required
+def admin_sensors(request):
+    _require_admin(request)
+    process_sensor_alerts()
+    date_context = _viewing_date_context(request)
+    selected_sensor_id = request.GET.get("sensor", "TEMPERATURE_01")
+    if selected_sensor_id not in MONITORED_SENSOR_IDS:
+        selected_sensor_id = "TEMPERATURE_01"
+
+    readings = SensorReadingHistory.objects.filter(
+        received_at__date=date_context["viewing_date"],
+        sensor_id__in=MONITORED_SENSOR_IDS,
+    ).order_by("received_at", "id")
+    latest_by_sensor = {}
+    for reading in readings:
+        latest_by_sensor[reading.sensor_id] = reading
+
+    def history_display(reading, sensor_id):
+        name, icon, show_value = SENSOR_PRESENTATION[sensor_id]
+        if reading is None:
+            return {
+                "sensor_id": sensor_id, "name": name, "icon": icon,
+                "value_display": "—", "last_update": None,
+                "health_label": "NO DATA", "problem": False,
+            }
+        if reading.sensor_type == "temperature":
+            value_display = f"{reading.value}°C"
+        elif reading.sensor_type == "humidity":
+            value_display = f"{reading.value}%"
+        elif reading.sensor_type == "fire":
+            value_display = "Fire Detected" if sensor_is_detected(reading) else "Normal"
+        else:
+            value_display = reading.value.title()
+        failed = reading.connection_status != "online"
+        abnormal = reading.condition_status == "abnormal"
+        if failed:
+            health_label = "FAILED"
+        elif abnormal:
+            health_label = "DANGER" if reading.sensor_type == "fire" else "UNSAFE"
+        else:
+            health_label = "SAFE" if show_value else "NORMAL"
+        return {
+            "sensor_id": sensor_id, "name": name, "icon": icon,
+            "value_display": value_display, "last_update": reading.received_at,
+            "health_label": health_label, "problem": failed or abnormal,
+        }
+
+    historical_sensor_rows = [
+        history_display(latest_by_sensor.get(sensor_id), sensor_id)
+        for sensor_id in MONITORED_SENSOR_IDS
+    ]
+    selected_readings = [
+        history_display(reading, selected_sensor_id)
+        for reading in readings if reading.sensor_id == selected_sensor_id
+    ]
+    return render(
+        request,
+        "back1/admin_sensors.html",
+        {
+            "sensor_rows": historical_sensor_rows,
+            "selected_sensor_id": selected_sensor_id,
+            "selected_sensor_name": SENSOR_PRESENTATION[selected_sensor_id][0],
+            "sensor_choices": [
+                (sensor_id, SENSOR_PRESENTATION[sensor_id][0])
+                for sensor_id in MONITORED_SENSOR_IDS
+            ],
+            "selected_readings": selected_readings,
+            **date_context,
+        },
+    )
+
+
+@login_required
+def admin_revenue(request):
+    _require_admin(request)
+    date_context = _viewing_date_context(request)
+    selected_type = request.GET.get("type", "all")
+    if selected_type not in {"all", "parking", "penalty"}:
+        selected_type = "all"
+
+    revenue = _daily_revenue(date_context["viewing_date"])
+    if selected_type == "parking":
+        transactions = revenue["parking_transactions"]
+    elif selected_type == "penalty":
+        transactions = revenue["penalty_transactions"]
+    else:
+        transactions = revenue["parking_transactions"] | revenue["penalty_transactions"]
+
+    return render(request, "back1/admin_revenue.html", {
+        **date_context,
+        **revenue,
+        "selected_type": selected_type,
+        "transactions": transactions.select_related("booking", "user").order_by("-paid_at", "-id"),
+    })
+
+
+@api_view(["POST"])
+@permission_classes([IsAdminUser])
+def acknowledge_alert(request, alert_id):
+    alert = get_object_or_404(Alert, pk=alert_id)
+    if not alert.acknowledged:
+        alert.acknowledged = True; alert.acknowledged_at = timezone.now(); alert.acknowledged_by = request.user
+        alert.save(update_fields=["acknowledged", "acknowledged_at", "acknowledged_by"])
+        SystemEvent.objects.create(event_type="admin_action", source="alert", description=f"Admin acknowledged Alert #{alert.id}.", user=request.user, sensor=alert.sensor)
+    return Response({"message": "Alert acknowledged."})
+
+
+@login_required
+def emergency_notify(request, emergency_id):
+    _require_admin(request)
+    emergency = get_object_or_404(Emergency, pk=emergency_id)
+    if request.method == "POST":
+        message = request.POST.get("message", "").strip()
+        if message:
+            send_emergency_notifications(emergency=emergency, admin=request.user, message=message)
+            messages.success(request, "Emergency notifications processed.")
+        return redirect("back1:admin-dashboard")
+    return render(request, "back1/emergency_notify.html", {"emergency": emergency})
+
 
 
 
@@ -48,7 +570,13 @@ from .serializers import (
 # ==========================
 
 
+@login_required
 def dashboard(request):
+
+    _require_admin(request)
+    process_sensor_alerts()
+    date_context = _viewing_date_context(request)
+    selected_date = date_context["viewing_date"]
 
 
     # ----------------------
@@ -56,16 +584,23 @@ def dashboard(request):
     # ----------------------
 
     total_slots = ParkingSlot.objects.count()
-
-
-    occupied_slots = ParkingSlot.objects.filter(
-        status="occupied"
+    parking_slots = ParkingSlot.objects.order_by("slot_number")
+    now = timezone.localtime()
+    current_time = now.time().replace(tzinfo=None)
+    next_moment = now + timedelta(seconds=1)
+    availability_end = (
+        next_moment.time().replace(tzinfo=None)
+        if next_moment.date() == now.date()
+        else time.max
+    )
+    available_slots = available_parking_spaces(
+        now.date(), current_time, availability_end
     ).count()
 
 
-    available_slots = (
-        total_slots - occupied_slots
-    )
+    occupied_slots = ParkingSlot.objects.filter(
+        is_physically_occupied=True
+    ).count()
 
 
     if total_slots > 0:
@@ -77,6 +612,7 @@ def dashboard(request):
     else:
 
         occupancy_percentage = 0
+    availability_percentage = int((available_slots / total_slots) * 100) if total_slots else 0
 
 
 
@@ -105,16 +641,14 @@ def dashboard(request):
     # Booking
     # ----------------------
 
-    latest_bookings = Booking.objects.order_by(
+    latest_bookings = Booking.objects.filter(booking_date=selected_date).order_by(
         "-created_at"
     )[:5]
     
     
+    expire_stale_pending_bookings(now=now)
     booking_count = Booking.objects.filter(
-    status__in=[
-        "confirmed",
-        "parked"
-        ]
+        booking_date=selected_date, status__in=CAPACITY_STATUSES
     ).count()
 
 
@@ -151,39 +685,27 @@ def dashboard(request):
     parking_slots = ParkingSlot.objects.all()
 
 
-    total_revenue = Transaction.objects.filter(
-        transaction_type__in=[
-            "payment",
-            "penalty"
-        ]
-    ).aggregate(
-        total=Sum("amount")
-    )["total"] or 0
-
-
-
-    parking_revenue = Transaction.objects.filter(
-        transaction_type="payment"
-    ).aggregate(
-        total=Sum("amount")
-    )["total"] or 0
-
-
-
-    penalty_revenue = Transaction.objects.filter(
-        transaction_type="penalty"
-    ).aggregate(
-        total=Sum("amount")
-    )["total"] or 0
+    revenue = _daily_revenue(selected_date)
+    parking_revenue = revenue["parking_revenue"]
+    penalty_revenue = revenue["penalty_revenue"]
+    total_revenue = revenue["total_revenue"]
     
     
     # ----------------------
     # Recently Activity
     # ----------------------
 
-    recent_activities = Transaction.objects.order_by(
-        "-created_at"
-    )[:5]
+    recent_activities = SystemEvent.objects.filter(timestamp__date=selected_date).select_related("booking", "parking_slot", "sensor").order_by("-timestamp")[:10]
+    active_alerts = Alert.objects.filter(acknowledged=False).select_related("sensor").order_by("-created_at")
+    active_emergency = Emergency.objects.filter(status="active").order_by("-created_at").first()
+    sensor_rows = monitored_sensor_status()
+    latest_emergency_sync = SensorData.objects.filter(
+        sensor_id__in=["TEMPERATURE_01", "HUMIDITY_01", "FIRE_01"]
+    ).aggregate(latest=Max("last_reading_at"))["latest"]
+    sensor_issues = [row["issue"] for row in sensor_rows if row["issue"]]
+    failed_sensors = [row for row in sensor_rows if row["failed"]]
+    fire_sensor = next(row for row in sensor_rows if row["sensor_id"] == "FIRE_01")
+    failed_gate_sensors = [row for row in failed_sensors if row["sensor_id"] in {"ENTRANCE_01", "EXIT_01"}]
 
 
     context = {
@@ -203,6 +725,7 @@ def dashboard(request):
 
         "occupancy_percentage":
         occupancy_percentage,
+        "availability_percentage": availability_percentage,
 
 
         "latest_sensor":
@@ -253,7 +776,22 @@ def dashboard(request):
 
 
         "recent_activities":
-        recent_activities
+        recent_activities,
+        "active_alerts": active_alerts,
+        "active_alert_count": active_alerts.count(),
+        "active_emergency": active_emergency,
+        "sensor_issues": sensor_issues,
+        "sensor_issue_count": len(sensor_issues),
+        "sensor_rows": sensor_rows,
+        **date_context,
+        "latest_emergency_sync": latest_emergency_sync,
+        "fire_detection_status": "FIRE DETECTED" if fire_sensor["abnormal"] and not fire_sensor["failed"] else "Normal",
+        "sensor_failure_status": f"{len(failed_sensors)} Sensor Failed" if failed_sensors else "No Issue",
+        "gate_failure_status": ", ".join(f'{row["name"]} Issue' for row in failed_gate_sensors) if failed_gate_sensors else "No Issue",
+        "maintenance_slots": ParkingSlot.objects.filter(is_under_maintenance=True).count(),
+        "disabled_slots": ParkingSlot.objects.filter(is_enabled=False).count(),
+        "backup_slots": ParkingSlot.objects.filter(is_backup=True).count(),
+        "upcoming_booking_count": Booking.objects.filter(booking_date__gte=timezone.localdate(), status__in=["pending", "confirmed"]).count(),
 
     }
 
@@ -280,6 +818,7 @@ def dashboard(request):
 
 
 @api_view(["GET"])
+@permission_classes([IsAdminUser])
 def dashboard_sensor_status(request):
 
 
@@ -300,7 +839,8 @@ def dashboard_sensor_status(request):
     for sensor in sensors:
 
 
-        if sensor.status == "active":
+        derived_online = sensor_is_online(sensor)
+        if derived_online:
 
             online += 1
 
@@ -331,8 +871,9 @@ def dashboard_sensor_status(request):
             sensor.value,
 
 
-            "status":
-            sensor.status,
+            "status": "online" if derived_online else "offline",
+
+            "detected": sensor_is_detected(sensor),
 
 
             "updated_at":
@@ -342,6 +883,35 @@ def dashboard_sensor_status(request):
 
 
 
+
+    rows = monitored_sensor_status()
+    dashboard_rows = []
+    for row in rows:
+        if row["sensor_type"] == "parking":
+            continue
+        no_data = row["last_update"] is None
+        if no_data and row["sensor_type"] in {"temperature", "humidity", "fire"}:
+            display_status = "NO DATA"
+        elif row["sensor_type"] in {"temperature", "humidity"}:
+            display_status = "UNSAFE" if row["failed"] or row["abnormal"] else "SAFE"
+        elif row["sensor_type"] == "fire":
+            display_status = "FAILED" if row["failed"] else ("DANGER" if row["abnormal"] else "SAFE")
+        else:
+            display_status = "FAILED" if row["failed"] or row["abnormal"] else "NORMAL"
+        dashboard_rows.append({
+            "sensor_id": row["sensor_id"],
+            "value": row["value_display"] or "—",
+            "display_status": display_status,
+            "problem": display_status in {"UNSAFE", "DANGER", "FAILED", "NO DATA"},
+        })
+    parking_rows = [row for row in rows if row["sensor_type"] == "parking"]
+    parking_failed_count = sum(bool(row["failed"] or row["abnormal"]) for row in parking_rows)
+    issue_count = sum(bool(row["issue"]) for row in rows)
+    emergency_updates = [
+        row["last_update"] for row in rows
+        if row["sensor_id"] in {"TEMPERATURE_01", "HUMIDITY_01", "FIRE_01"} and row["last_update"]
+    ]
+    latest_sync = max(emergency_updates, default=None)
 
     return Response({
 
@@ -357,8 +927,21 @@ def dashboard_sensor_status(request):
         error,
 
 
-        "data":
-        sensor_list
+        "data": sensor_list,
+        "gates": [
+            {"gate_type": gate.gate_type, "is_open": gate.is_open, "updated_at": gate.updated_at}
+            for gate in Gate.objects.order_by("gate_type")
+        ],
+        "server_time": timezone.now(),
+        "dashboard": {
+            "issue_count": issue_count,
+            "banner": f"🔴 {issue_count} Active Issue{'s' if issue_count != 1 else ''}" if issue_count else "🟢 No Active Emergency",
+            "sensors": dashboard_rows,
+            "parking_failed_count": parking_failed_count,
+            "latest_sync": latest_sync,
+            "latest_sync_time": timezone.localtime(latest_sync).strftime("%I:%M %p") if latest_sync else None,
+            "latest_sync_date": timezone.localtime(latest_sync).strftime("%d %b %Y") if latest_sync else None,
+        },
 
     })
 # ==========================
@@ -410,6 +993,91 @@ def parking_slots(request):
     })
 
 
+@api_view(["POST"])
+@permission_classes([IsAdminUser])
+def admin_set_parking_state(request, slot_id):
+    try:
+        slot = ParkingSlot.objects.get(id=slot_id)
+    except ParkingSlot.DoesNotExist:
+        return Response({"error": "Parking slot not found"}, status=404)
+
+    requested_state = request.data.get("state")
+    state_fields = {
+        "normal": {
+            "is_enabled": True,
+            "is_under_maintenance": False,
+            "is_backup": False,
+        },
+        "disabled": {
+            "is_enabled": False,
+            "is_under_maintenance": False,
+            "is_backup": False,
+        },
+        "maintenance": {
+            "is_enabled": True,
+            "is_under_maintenance": True,
+            "is_backup": False,
+        },
+        "backup": {
+            "is_enabled": True,
+            "is_under_maintenance": False,
+            "is_backup": True,
+        },
+    }
+    if requested_state not in state_fields:
+        return Response({"error": "Invalid parking state"}, status=400)
+
+    for field, value in state_fields[requested_state].items():
+        setattr(slot, field, value)
+
+    if requested_state == "normal":
+        if slot.is_physically_occupied:
+            slot.status = "occupied"
+        elif slot.is_booking_reserved:
+            slot.status = "reserved"
+        else:
+            slot.status = "available"
+    else:
+        slot.status = requested_state
+
+    slot.save(update_fields=[
+        "is_enabled",
+        "is_under_maintenance",
+        "is_backup",
+        "status",
+        "updated_at",
+    ])
+
+    SystemEvent.objects.create(
+        event_type="admin_action",
+        source="admin_parking_management",
+        description=f"Admin set {slot.slot_number} to {requested_state.title()}.",
+        user=request.user,
+        parking_slot=slot,
+    )
+
+    return Response({
+        "slot_number": slot.slot_number,
+        "state": requested_state,
+        "is_enabled": slot.is_enabled,
+        "is_under_maintenance": slot.is_under_maintenance,
+        "is_backup": slot.is_backup,
+    })
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def booking_availability(request):
+    booking_date = parse_date(request.query_params.get("date", ""))
+    start_time = parse_time(request.query_params.get("start_time", ""))
+    end_time = parse_time(request.query_params.get("end_time", ""))
+    if not booking_date or not start_time or not end_time or end_time <= start_time:
+        return Response({"error": "Valid date and start/end times are required."}, status=400)
+    if booking_date < timezone.localdate() or booking_range_has_ended(booking_date, end_time):
+        return Response({"error": "This booking time has already ended."}, status=400)
+    return Response(availability(booking_date, start_time, end_time))
+
+
 
 
 
@@ -421,10 +1089,14 @@ def parking_slots(request):
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def booking_list(request):
 
+    bookings = Booking.objects.all()
+    if not _is_admin(request.user):
+        bookings = bookings.filter(user=request.user)
 
-    bookings = Booking.objects.all().order_by(
+    bookings = bookings.order_by(
         "-created_at"
     )[:10]
 
@@ -494,6 +1166,7 @@ def booking_list(request):
 
 
 @api_view(["GET"])
+@permission_classes([IsAdminUser])
 def gate_status(request):
 
 
@@ -548,6 +1221,7 @@ def gate_status(request):
 
 
 @api_view(["POST"])
+@permission_classes([IsAdminUser])
 def gate_control(request, gate_id):
 
 
@@ -638,6 +1312,7 @@ def gate_control(request, gate_id):
 
 
 @api_view(["GET"])
+@permission_classes([IsAdminUser])
 def emergency_status(request):
 
 
@@ -694,6 +1369,7 @@ def emergency_status(request):
 
 
 @api_view(["GET"])
+@permission_classes([IsAdminUser])
 def latest_sensor(request):
 
 
@@ -732,6 +1408,7 @@ def latest_sensor(request):
 
 
 @api_view(["GET"])
+@permission_classes([IsAdminUser])
 def sensor_history(request):
 
 
@@ -768,66 +1445,32 @@ def sensor_history(request):
 
 
 @api_view(["POST"])
+@permission_classes([AllowAny])
 def update_sensor(request):
-
-
-    sensor_id = request.data.get(
-        "sensor_id"
-    )
-
-
-    sensor_type = request.data.get(
-        "sensor_type"
-    )
-
-
-    location = request.data.get(
-        "location"
-    )
-
-
-    value = request.data.get(
-        "value"
-    )
-
-
-    sensor_status = request.data.get(
-        "status",
-        "active"
-    )
-
-
-
-    sensor = SensorData.objects.create(
-
-        sensor_id=sensor_id,
-
-        sensor_type=sensor_type,
-
-        location=location,
-
-        value=value,
-
-        status=sensor_status
-
-    )
-
-
-
-    return Response({
-
-        "message":
-        "Sensor data saved",
-
-
-        "sensor_id":
-        sensor.sensor_id
-
-    },
-
-    status=status.HTTP_201_CREATED
-
-    )
+    is_device = _device_api_key_is_valid(request)
+    if not is_device and not _is_admin(request.user):
+        return Response({"error": "Valid device authentication is required."}, status=401 if not request.user.is_authenticated else 403)
+    try:
+        sensor, changed = update_logical_sensor(
+            sensor_id=request.data.get("sensor_id", ""),
+            value=request.data.get("value", ""),
+            condition_status=request.data.get("condition_status"),
+        )
+    except ValueError as exc:
+        if _is_admin(request.user) and request.data.get("sensor_type"):
+            sensor, created = SensorData.objects.update_or_create(
+                sensor_id=request.data.get("sensor_id"),
+                defaults={
+                    "sensor_type": request.data.get("sensor_type"),
+                    "location": request.data.get("location", ""),
+                    "value": request.data.get("value", ""),
+                    "last_reading_at": timezone.now(),
+                    "connection_status": "online",
+                },
+            )
+            return Response({"message": "Sensor updated", "sensor_id": sensor.sensor_id, "changed": created}, status=201)
+        return Response({"error": str(exc)}, status=400)
+    return Response({"message": "Sensor updated", "sensor_id": sensor.sensor_id, "changed": changed})
 
 
 
@@ -841,6 +1484,7 @@ def update_sensor(request):
 
 
 @api_view(["GET"])
+@permission_classes([IsAdminUser])
 def revenue_summary(request):
 
 
@@ -906,16 +1550,22 @@ def revenue_summary(request):
 
 
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def create_booking(request):
 
+    if _is_admin(request.user):
+        raise PermissionDenied
+
+    form = BookingForm(request.data)
+    if not form.is_valid():
+        return Response({"errors": form.errors}, status=400)
+    try:
+        secure_booking = create_pending_booking(user=request.user, **form.cleaned_data)
+    except ValueError as exc:
+        return Response({"error": str(exc)}, status=400)
+    return Response({"message": "Booking created successfully", "booking_id": secure_booking.id})
 
     try:
-
-
-        user_id = request.data.get(
-            "user"
-        )
-
 
         slot_id = request.data.get(
             "parking_slot"
@@ -990,7 +1640,7 @@ def create_booking(request):
 
         booking = Booking.objects.create(
 
-            user_id=user_id,
+            user=request.user,
 
             parking_slot=slot,
 
@@ -1000,7 +1650,7 @@ def create_booking(request):
 
             end_time=end_time,
 
-            status="confirmed"
+            status="pending"
 
         )
 
@@ -1042,18 +1692,14 @@ def create_booking(request):
 
 
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def car_entry(request, booking_id):
 
+    return Response({"error": "This legacy endpoint is retired. Use the validated customer gate flow."}, status=410)
 
-    try:
+    booking = _get_authorized_booking(request, booking_id)
 
-
-        booking = Booking.objects.get(
-            id=booking_id
-        )
-
-
-    except Booking.DoesNotExist:
+    if booking is None:
 
 
         return Response({
@@ -1116,21 +1762,14 @@ def car_entry(request, booking_id):
 
 
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def car_exit(request, booking_id):
 
+    return Response({"error": "This legacy endpoint is retired. Use the validated exit gate and overstay flow."}, status=410)
 
-    try:
+    booking = _get_authorized_booking(request, booking_id)
 
-
-        booking = Booking.objects.get(
-
-            id=booking_id
-
-        )
-
-
-
-    except Booking.DoesNotExist:
+    if booking is None:
 
 
         return Response({
@@ -1353,48 +1992,31 @@ def car_exit(request, booking_id):
 
 
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def cancel_booking(request, booking_id):
-
-
+    if _is_admin(request.user):
+        raise PermissionDenied
+    authorized_booking = _get_authorized_booking(request, booking_id)
+    if authorized_booking is None:
+        return Response({"error": "Booking not found"}, status=404)
     try:
-
-
-        booking = Booking.objects.get(
-
-            id=booking_id
-
+        booking, refund, changed = cancel_customer_booking(
+            booking_id=booking_id,
+            user=request.user,
         )
-
-
     except Booking.DoesNotExist:
-
-
-        return Response({
-
-            "error":
-            "Booking not found"
-
-        },
-
-        status=404
-
-        )
-
-
-
-
-
-    booking.status = "cancelled"
-
-    booking.save()
-
-
-
+        return Response({"error": "Booking not found"}, status=404)
+    except ValueError as exc:
+        return Response({"error": str(exc)}, status=400)
+    if not changed:
+        return Response({"message": "Booking was already cancelled.", "refunded": bool(refund)})
     return Response({
-
-        "message":
-        "Booking cancelled"
-
+        "message": (
+            f"Booking cancelled. £{refund.amount} was refunded to your wallet."
+            if refund else "Booking cancelled. No refund was issued."
+        ),
+        "refunded": bool(refund),
+        "refund_amount": refund.amount if refund else Decimal("0.00"),
     })
 
 
@@ -1410,8 +2032,11 @@ def cancel_booking(request, booking_id):
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def wallet_detail(request, user_id):
 
+    if not _is_admin(request.user) and request.user.id != user_id:
+        raise PermissionDenied
 
     try:
 
@@ -1467,8 +2092,11 @@ def wallet_detail(request, user_id):
 
 
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def add_wallet_balance(request, user_id):
 
+    if not _is_admin(request.user) and request.user.id != user_id:
+        raise PermissionDenied
 
     amount = request.data.get(
 
@@ -1480,6 +2108,10 @@ def add_wallet_balance(request, user_id):
 
     try:
 
+        parsed_amount = Decimal(amount)
+        if not parsed_amount.is_finite() or parsed_amount <= 0:
+            raise ValueError
+
 
         wallet, created = Wallet.objects.get_or_create(
 
@@ -1489,11 +2121,7 @@ def add_wallet_balance(request, user_id):
 
 
 
-        wallet.balance += Decimal(
-
-            amount
-
-        )
+        wallet.balance += parsed_amount
 
 
         wallet.save()
@@ -1543,8 +2171,11 @@ def add_wallet_balance(request, user_id):
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def transaction_history(request, user_id):
 
+    if not _is_admin(request.user) and request.user.id != user_id:
+        raise PermissionDenied
 
     transactions = Transaction.objects.filter(
 
@@ -1579,6 +2210,7 @@ def transaction_history(request, user_id):
 
 
 @api_view(["GET"])
+@permission_classes([IsAdminUser])
 def emergency_list(request):
 
 
@@ -1614,6 +2246,7 @@ def emergency_list(request):
 
 
 @api_view(["POST"])
+@permission_classes([IsAdminUser])
 def create_emergency(request):
 
 
@@ -1660,6 +2293,7 @@ def create_emergency(request):
 
 
 @api_view(["POST"])
+@permission_classes([IsAdminUser])
 def resolve_emergency(request, emergency_id):
 
 
@@ -1691,9 +2325,11 @@ def resolve_emergency(request, emergency_id):
 
 
 
+    changed = emergency.status != "resolved"
     emergency.status = "resolved"
-
-    emergency.save()
+    emergency.save(update_fields=["status", "updated_at"])
+    if changed:
+        SystemEvent.objects.create(event_type="emergency", source="admin_emergency", description=f"Admin resolved Emergency #{emergency.id}.", user=request.user)
 
 
 
@@ -1721,6 +2357,7 @@ def resolve_emergency(request, emergency_id):
 
 
 @api_view(["GET"])
+@permission_classes([IsAdminUser])
 def fire_sensor_check(request):
 
 
@@ -1806,6 +2443,7 @@ def fire_sensor_check(request):
 
 
 @api_view(["GET"])
+@permission_classes([IsAdminUser])
 def gates_api(request):
 
 
@@ -1830,6 +2468,90 @@ def gates_api(request):
     )
 
 
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def device_gate_commands(request):
+    if not _device_api_key_is_valid(request):
+        return Response(
+            {"error": "Valid device authentication is required."}, status=401
+        )
+    now = timezone.now()
+    expire_gate_commands(now=now)
+    commands = GateCommand.objects.filter(
+        status="pending", expires_at__gt=now
+    ).select_related("gate").order_by("created_at", "id")
+    return Response({
+        "commands": [
+            {
+                "id": command.id,
+                "gate_id": command.gate_id,
+                "gate": command.gate.gate_type,
+                "action": command.action,
+                "status": command.status,
+                "created_at": command.created_at,
+                "expires_at": command.expires_at,
+            }
+            for command in commands
+        ]
+    })
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def device_claim_gate_command(request, command_id):
+    if not _device_api_key_is_valid(request):
+        return Response(
+            {"error": "Valid device authentication is required."}, status=401
+        )
+    try:
+        command = claim_gate_command(command_id=command_id)
+    except GateCommand.DoesNotExist:
+        return Response({"error": "Gate command not found."}, status=404)
+    except ValueError as exc:
+        return Response({"error": str(exc)}, status=409)
+    return Response({
+        "id": command.id,
+        "gate": command.gate.gate_type,
+        "action": command.action,
+        "status": command.status,
+        "expires_at": command.expires_at,
+    })
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def device_acknowledge_gate_command(request, command_id):
+    if not _device_api_key_is_valid(request):
+        return Response(
+            {"error": "Valid device authentication is required."}, status=401
+        )
+    result_status = request.data.get("status", "")
+    if result_status not in ["succeeded", "failed"]:
+        return Response(
+            {"error": "Acknowledgement status must be succeeded or failed."},
+            status=400,
+        )
+    try:
+        command, changed = acknowledge_gate_command(
+            command_id=command_id,
+            result_status=result_status,
+            error_message=request.data.get("error", ""),
+        )
+    except GateCommand.DoesNotExist:
+        return Response({"error": "Gate command not found."}, status=404)
+    except ValueError as exc:
+        return Response({"error": str(exc)}, status=409)
+    return Response({
+        "id": command.id,
+        "gate": command.gate.gate_type,
+        "action": command.action,
+        "status": command.status,
+        "physical_state": "open" if command.gate.is_physically_open else "closed"
+            if command.gate.is_physically_open is False else "unknown",
+        "changed": changed,
+    })
+
+
 
 
 
@@ -1842,6 +2564,7 @@ def gates_api(request):
 
 
 @api_view(["POST"])
+@permission_classes([IsAdminUser])
 def open_gate(request, gate_id):
 
 
@@ -1873,9 +2596,17 @@ def open_gate(request, gate_id):
 
 
 
+    changed = not gate.is_open
     gate.is_open = True
-
-    gate.save()
+    gate.save(update_fields=["is_open", "updated_at"])
+    if changed:
+        create_gate_command(
+            gate=gate,
+            action="open",
+            requested_via="admin",
+            requested_by_user=request.user,
+        )
+        SystemEvent.objects.create(event_type="gate_opened", source="admin_gate", description=f"Admin manually opened {gate.gate_name}.", user=request.user, gate=gate)
 
 
 
@@ -1907,6 +2638,7 @@ def open_gate(request, gate_id):
 
 
 @api_view(["POST"])
+@permission_classes([IsAdminUser])
 def close_gate(request, gate_id):
 
 
@@ -1938,9 +2670,17 @@ def close_gate(request, gate_id):
 
 
 
+    changed = gate.is_open
     gate.is_open = False
-
-    gate.save()
+    gate.save(update_fields=["is_open", "updated_at"])
+    if changed:
+        create_gate_command(
+            gate=gate,
+            action="close",
+            requested_via="admin",
+            requested_by_user=request.user,
+        )
+        SystemEvent.objects.create(event_type="gate_closed", source="admin_gate", description=f"Admin manually closed {gate.gate_name}.", user=request.user, gate=gate)
 
 
 
@@ -2037,58 +2777,101 @@ class BookingListView(ListView):
 
 
 
-class BookingCreateView(
-    LoginRequiredMixin,
-    CreateView
-):
+class BookingCreateView(LoginRequiredMixin, View):
+    template_name = "back1/booking_form.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated and _is_admin(request.user):
+            return redirect("back1:admin-dashboard")
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request):
+        return render(request, self.template_name, {
+            "form": BookingForm(),
+            "hours": [f"{hour:02d}:00" for hour in range(24)],
+        })
+
+    def post(self, request):
+        # Legacy parking-space fields are deliberately ignored. Assignment is
+        # always recalculated server-side from the authenticated request.
+        form = BookingForm(request.POST)
+        if form.is_valid():
+            try:
+                booking = create_pending_booking(
+                    user=request.user, **form.cleaned_data
+                )
+            except ValueError as exc:
+                form.add_error(None, str(exc))
+            else:
+                messages.success(request, "Parking space assigned. Complete payment to confirm.")
+                return redirect("back1:booking-payment", booking_id=booking.id)
+        return render(request, self.template_name, {
+            "form": form,
+            "hours": [f"{hour:02d}:00" for hour in range(24)],
+        })
 
 
-    model = Booking
-
-
-    fields = [
-
-        "parking_slot",
-
-        "booking_date",
-
-        "start_time",
-
-        "end_time"
-
-    ]
-
-
-    template_name = (
-        "back1/booking_form.html"
+@login_required
+def booking_payment(request, booking_id):
+    booking = get_object_or_404(
+        Booking.objects.select_related("parking_slot"), pk=booking_id, user=request.user
     )
+    expire_stale_pending_bookings()
+    booking.refresh_from_db()
+    wallet, _ = Wallet.objects.get_or_create(user=request.user)
+    if request.method == "POST":
+        try:
+            booking, charged = pay_booking(booking_id=booking.id, user=request.user)
+        except ValueError as exc:
+            messages.error(request, str(exc))
+        else:
+            if charged:
+                send_booking_confirmation(booking)
+            return redirect("back1:booking-success", booking_id=booking.id)
+    return render(request, "back1/booking_payment.html", {
+        "booking": booking, "wallet": wallet,
+    })
 
 
-    success_url = reverse_lazy(
-        "back1:dashboard"
+@login_required
+def booking_success(request, booking_id):
+    booking = get_object_or_404(
+        Booking.objects.select_related("parking_slot"),
+        pk=booking_id, user=request.user, payment_status="paid",
     )
+    return render(request, "back1/booking_success.html", {"booking": booking})
 
 
-
-
-
-    def form_valid(self, form):
-
-
-        form.instance.user = (
-            self.request.user
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def customer_gate_request(request, booking_id, gate_type):
+    if gate_type not in ["entrance", "exit"]:
+        return Response({"error": "Invalid gate."}, status=400)
+    try:
+        booking, gate, changed = request_customer_gate(
+            booking_id=booking_id, user=request.user, gate_type=gate_type
         )
+    except Booking.DoesNotExist:
+        return Response({"error": "Booking not found."}, status=404)
+    except ValueError as exc:
+        return Response({"error": str(exc)}, status=400)
+    return Response({"message": f"{gate.get_gate_type_display()} Gate is open.", "changed": changed})
 
 
-        messages.success(
-
-            self.request,
-
-            "Booking created successfully"
-
-        )
-
-
-        return super().form_valid(
-            form
-        )
+@login_required
+def overstay_payment(request, booking_id):
+    booking = get_object_or_404(
+        Booking.objects.select_related("parking_slot"), pk=booking_id, user=request.user
+    )
+    wallet, _ = Wallet.objects.get_or_create(user=request.user)
+    rate = ParkingRate.objects.order_by("id").first()
+    if request.method == "POST":
+        try:
+            booking, charged = pay_overstay(booking_id=booking.id, user=request.user)
+        except ValueError as exc:
+            messages.error(request, str(exc))
+        else:
+            if charged:
+                messages.success(request, "Overstay payment completed. Request the Exit Gate again.")
+            return redirect("back1:bookings")
+    return render(request, "back1/overstay_payment.html", {"booking": booking, "wallet": wallet, "rate": rate})

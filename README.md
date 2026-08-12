@@ -1,7 +1,7 @@
 # Smart Car Park System
 
 ## Project Overview
-A smart parking system using IoT sensors, Raspberry Pi, Cloud backend and Web dashboard.
+A smart parking system using IoT sensors, Raspberry Pi, a Django backend and a web dashboard rendered with Django templates.
 
 ## Sensors Used
 
@@ -18,8 +18,8 @@ A smart parking system using IoT sensors, Raspberry Pi, Cloud backend and Web da
 
 - Raspberry Pi
 - Django REST Framework Backend
-- React Dashboard
-- Cloud Database
+- Django Template Dashboard
+- Django-managed Database
 
 ## Main Features
 

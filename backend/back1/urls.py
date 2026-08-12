@@ -13,9 +13,45 @@ urlpatterns = [
 
     path(
         "",
-        views.dashboard,
-        name="dashboard"
+        views.root_redirect,
+        name="home"
     ),
+
+    path(
+        "register/",
+        views.register,
+        name="register"
+    ),
+
+    path(
+        "dashboard/",
+        views.customer_dashboard,
+        name="customer-dashboard"
+    ),
+
+    path(
+        "admin-dashboard/",
+        views.dashboard,
+        name="admin-dashboard"
+    ),
+
+    path(
+        "profile/",
+        views.profile,
+        name="profile"
+    ),
+    path("admin-dashboard/bookings/", views.admin_bookings, name="admin-bookings"),
+    path("admin-dashboard/bookings/<int:booking_id>/edit/", views.admin_booking_edit, name="admin-booking-edit"),
+    path("admin-dashboard/bookings/<int:booking_id>/delete/", views.admin_booking_delete, name="admin-booking-delete"),
+    path("admin-dashboard/customers/", views.admin_customers, name="admin-customers"),
+    path("admin-dashboard/customers/<int:user_id>/edit/", views.admin_customer_edit, name="admin-customer-edit"),
+    path("admin-dashboard/customers/<int:user_id>/delete/", views.admin_customer_delete, name="admin-customer-delete"),
+    path("admin-dashboard/events/", views.admin_events, name="admin-events"),
+    path("admin-dashboard/alerts/", views.admin_alerts, name="admin-alerts"),
+    path("admin-dashboard/sensors/", views.admin_sensors, name="admin-sensors"),
+    path("admin-dashboard/revenue/", views.admin_revenue, name="admin-revenue"),
+    path("api/alerts/<int:alert_id>/acknowledge/", views.acknowledge_alert, name="acknowledge-alert"),
+    path("admin-dashboard/emergencies/<int:emergency_id>/notify/", views.emergency_notify, name="emergency-notify"),
 
 
     # ==========================
@@ -67,6 +103,7 @@ urlpatterns = [
         views.update_sensor,
         name="update_sensor"
     ),
+    path("api/device/sensors/update/", views.update_sensor, name="device-sensor-update"),
 
 
     path(
@@ -85,6 +122,17 @@ urlpatterns = [
         "api/parking-slots/",
         views.parking_slots,
         name="parking_slots"
+    ),
+
+    path(
+        "api/parking-slots/<int:slot_id>/admin-state/",
+        views.admin_set_parking_state,
+        name="admin-parking-state"
+    ),
+    path(
+        "api/bookings/availability/",
+        views.booking_availability,
+        name="booking-availability",
     ),
 
 
@@ -137,6 +185,21 @@ urlpatterns = [
         "api/gates/",
         views.gates_api,
         name="gates_api"
+    ),
+    path(
+        "api/device/gates/commands/",
+        views.device_gate_commands,
+        name="device-gate-commands",
+    ),
+    path(
+        "api/device/gates/commands/<int:command_id>/claim/",
+        views.device_claim_gate_command,
+        name="device-claim-gate-command",
+    ),
+    path(
+        "api/device/gates/commands/<int:command_id>/acknowledge/",
+        views.device_acknowledge_gate_command,
+        name="device-acknowledge-gate-command",
     ),
 
 
@@ -230,7 +293,7 @@ urlpatterns = [
 
     path(
         "bookings/",
-        views.BookingListView.as_view(),
+        views.my_bookings,
         name="bookings"
     ),
 
@@ -240,5 +303,17 @@ urlpatterns = [
         views.BookingCreateView.as_view(),
         name="booking-create"
     ),
+    path(
+        "bookings/<int:booking_id>/payment/",
+        views.booking_payment,
+        name="booking-payment",
+    ),
+    path(
+        "bookings/<int:booking_id>/success/",
+        views.booking_success,
+        name="booking-success",
+    ),
+    path("api/bookings/<int:booking_id>/gate/<str:gate_type>/", views.customer_gate_request, name="customer-gate-request"),
+    path("bookings/<int:booking_id>/overstay-payment/", views.overstay_payment, name="overstay-payment"),
 
 ]
