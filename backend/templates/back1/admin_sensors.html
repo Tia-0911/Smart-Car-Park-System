@@ -1,0 +1,25 @@
+{% extends "back1/base.html" %}
+{% block content %}
+<section class="admin-history-page">
+  <header class="history-page-header">
+    <div class="history-title-wrap"><span class="history-title-icon purple">📡</span><div><h1>Sensor Monitoring</h1><p>Historical readings received from real devices for the selected date.</p></div></div>
+    <a class="history-back-button" href="{% url 'back1:admin-dashboard' %}?date={{ viewing_date|date:'Y-m-d' }}">← Back to Dashboard</a>
+  </header>
+
+  <div class="history-date-bar" aria-label="Sensor history viewing date">
+    <div class="history-date-label"><span>Viewing Date — Sensor History</span><strong>📅 {{ viewing_date|date:"d M Y" }}</strong></div>
+    <div class="history-date-actions"><a href="?date={{ viewing_previous_date|date:'Y-m-d' }}&sensor={{ selected_sensor_id }}">← Previous Day</a><a href="?date={% now 'Y-m-d' %}&sensor={{ selected_sensor_id }}">Today</a><a href="?date={{ viewing_next_date|date:'Y-m-d' }}&sensor={{ selected_sensor_id }}">Next Day →</a><form method="get"><input type="date" name="date" value="{{ viewing_date|date:'Y-m-d' }}"><input type="hidden" name="sensor" value="{{ selected_sensor_id }}"><button type="submit">Apply</button></form></div>
+  </div>
+
+  <div class="history-info-callout"><span>ℹ️</span><p><strong>Historical readings shown below.</strong> Live sensor health is available on the Admin Dashboard.</p></div>
+
+  <div class="sensor-history-grid">
+    {% for row in sensor_rows %}<a class="sensor-history-link{% if row.sensor_id == 'ENTRANCE_01' or row.sensor_id == 'EXIT_01' %} sensor-final-row{% endif %}{% if row.sensor_id == selected_sensor_id %} selected{% endif %}" href="?date={{ viewing_date|date:'Y-m-d' }}&sensor={{ row.sensor_id }}"><article class="sensor-history-card{% if row.problem %} problem{% elif row.health_label == 'NO DATA' %} no-data{% endif %}"><div class="sensor-card-heading"><span>{{ row.icon }}</span><h2>{{ row.name }}</h2></div><span class="sensor-latest-label">Latest</span><strong class="sensor-card-value">{{ row.value_display }}</strong><small>{% if row.last_update %}Last update: {{ row.last_update|time:"h:i A" }}{% else %}No readings received{% endif %}</small>{% if row.health_label == "NO DATA" %}<span class="history-pill sensor-neutral">⚪ NO DATA</span>{% elif row.problem %}<span class="history-pill sensor-danger">🔴 {{ row.health_label }}</span>{% else %}<span class="history-pill sensor-safe">🟢 {{ row.health_label }}</span>{% endif %}</article></a>{% endfor %}
+  </div>
+
+  <section class="history-table-card sensor-readings-card">
+    <header class="history-card-header"><div><small>Selected sensor</small><h2>Daily Readings — {{ selected_sensor_name }}</h2></div><form method="get"><input type="hidden" name="date" value="{{ viewing_date|date:'Y-m-d' }}"><label class="visually-hidden" for="selected-sensor">Selected Sensor</label><select id="selected-sensor" name="sensor">{% for sensor_id,name in sensor_choices %}<option value="{{ sensor_id }}"{% if sensor_id == selected_sensor_id %} selected{% endif %}>{{ name }}</option>{% endfor %}</select><button class="history-primary-button" type="submit">Show</button></form></header>
+    <div class="history-table-wrap"><table class="history-table"><thead><tr><th>Time</th><th>Value</th><th>Condition / Status</th></tr></thead><tbody>{% for reading in selected_readings %}<tr><td>{{ reading.last_update|time:"H:i" }}</td><td class="money-strong">{{ reading.value_display }}</td><td>{% if reading.problem %}<span class="history-pill sensor-danger">{{ reading.health_label }}</span>{% else %}<span class="history-pill sensor-safe">{{ reading.health_label }}</span>{% endif %}</td></tr>{% empty %}<tr><td colspan="3"><div class="history-empty"><span>📡</span><strong>No real readings were received for this sensor on the selected date.</strong><p>Only readings received from devices are stored.</p></div></td></tr>{% endfor %}</tbody></table></div>
+  </section>
+</section>
+{% endblock %}

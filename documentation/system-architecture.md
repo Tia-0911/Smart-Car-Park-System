@@ -28,10 +28,10 @@ The Smart Car Park System consists of four main layers:
         Django Backend (Cloud)
                     |
                     ↓
-          Cloud Database
+              Database
                     |
                     ↓
-          React Web Dashboard
+     Django Template Web Dashboard
 
 
 
@@ -72,7 +72,7 @@ Function:
 ### Frontend Layer
 
 Technology:
-- React
+- Django templates, JavaScript and CSS
 
 Function:
 - Display:

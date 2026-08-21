@@ -1,0 +1,129 @@
+{% extends "back1/base.html" %}
+{% block content %}
+<section class="dashboard-card modern-card p-4 mx-auto" style="max-width:850px">
+  <h1 class="h3">Book Parking</h1>
+  <p class="text-secondary">Choose a date and time. Your parking space is assigned automatically.</p>
+  <form method="post" id="booking-form">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="row g-3">
+      <div class="col-md-5"><label for="id_booking_date">Step 1 — Date</label>{{ form.booking_date }}{{ form.booking_date.errors }}</div>
+      <div class="col-md-7"><label>Step 2 — Consecutive hours</label><div id="selected-range" class="form-control bg-light">No time selected</div></div>
+    </div>
+    <input type="hidden" name="start_time" id="id_start_time" value="{{ form.start_time.value|default:'' }}">
+    <input type="hidden" name="end_time" id="id_end_time" value="{{ form.end_time.value|default:'' }}">
+    {{ form.start_time.errors }}{{ form.end_time.errors }}
+    <p class="small text-secondary mt-3 mb-0">Select one hour, then click an adjacent hour to extend the range. Remove hours from either end.</p>
+    <div id="time-grid" class="d-flex flex-wrap gap-2 mt-4"></div>
+    <div id="availability" class="mt-4 p-3 rounded" style="background:#f1f5f9" aria-live="polite">Select date and time to check availability.</div>
+    <button id="book-button" class="btn btn-primary mt-3" disabled>Create Pending Booking</button>
+  </form>
+</section>
+<script>
+const fields = [document.querySelector('#id_booking_date'), document.querySelector('#id_start_time'), document.querySelector('#id_end_time')];
+const result = document.querySelector('#availability');
+const button = document.querySelector('#book-button');
+const grid = document.querySelector('#time-grid');
+const selectedRange = document.querySelector('#selected-range');
+let selectedStart = null;
+let selectedEnd = null;
+let hourlySlots = [];
+
+function hourText(hour) { return String(hour).padStart(2, '0') + ':00'; }
+function renderSelection() {
+  hourlySlots.forEach(({hour, element, available}) => {
+    const selected = selectedStart !== null && hour >= selectedStart && hour < selectedEnd;
+    element.className = `btn btn-sm ${selected ? 'btn-primary shadow' : (available ? 'btn-success' : 'btn-danger')}`;
+    element.setAttribute('aria-pressed', selected ? 'true' : 'false');
+  });
+  if (selectedStart === null) {
+    fields[1].value = ''; fields[2].value = '';
+    selectedRange.textContent = 'No time selected'; button.disabled = true;
+  } else {
+    fields[1].value = hourText(selectedStart); fields[2].value = hourText(selectedEnd);
+    const hours = selectedEnd - selectedStart;
+    selectedRange.textContent = `${hourText(selectedStart)}–${hourText(selectedEnd)} (${hours} hour${hours === 1 ? '' : 's'})`;
+  }
+}
+
+async function rangeIsAvailable(startHour, endHour) {
+  const query = new URLSearchParams({date: fields[0].value, start_time: hourText(startHour), end_time: hourText(endHour)});
+  const response = await fetch("{% url 'back1:booking-availability' %}?" + query);
+  const data = await response.json();
+  return {ok: response.ok && data.available, response, data};
+}
+
+async function selectHour(hour) {
+  let nextStart = selectedStart;
+  let nextEnd = selectedEnd;
+  const isSelected = selectedStart !== null && hour >= selectedStart && hour < selectedEnd;
+  if (selectedStart === null) {
+    nextStart = hour; nextEnd = hour + 1;
+  } else if (isSelected) {
+    if (selectedEnd - selectedStart === 1) {
+      selectedStart = null; selectedEnd = null; renderSelection();
+      result.textContent = 'Select date and time to check availability.'; return;
+    }
+    if (hour === selectedStart) nextStart += 1;
+    else if (hour === selectedEnd - 1) nextEnd -= 1;
+    else {
+      result.style.background = '#fff7ed'; result.style.color = '#9a3412';
+      result.textContent = 'To keep the booking consecutive, remove hours from either end of the selected range.'; return;
+    }
+  } else if (hour + 1 === selectedStart) {
+    nextStart = hour;
+  } else if (hour === selectedEnd) {
+    nextEnd = hour + 1;
+  } else {
+    result.style.background = '#fff7ed'; result.style.color = '#9a3412';
+    result.textContent = 'Please select an hour directly next to the current range. Gaps are not allowed.'; return;
+  }
+  const check = await rangeIsAvailable(nextStart, nextEnd);
+  if (!check.ok) {
+    result.style.background = '#fee2e2'; result.style.color = '#991b1b';
+    result.textContent = 'No single parking space is available for that entire time range.'; return;
+  }
+  selectedStart = nextStart; selectedEnd = nextEnd; renderSelection();
+  showAvailability(check.data);
+}
+
+async function loadHourlySlots() {
+  grid.innerHTML = '';
+  hourlySlots = []; selectedStart = null; selectedEnd = null; renderSelection();
+  if (!fields[0].value) return;
+  for (let hour = 0; hour < 23; hour++) {
+    const start = hourText(hour);
+    const end = hourText(hour + 1);
+    const query = new URLSearchParams({date: fields[0].value, start_time: start, end_time: end});
+    const response = await fetch("{% url 'back1:booking-availability' %}?" + query);
+    const data = await response.json();
+    const slot = document.createElement('button');
+    slot.type = 'button'; slot.className = `btn btn-sm ${data.available ? 'btn-success' : 'btn-danger'}`;
+    slot.disabled = !data.available; slot.textContent = `${start}–${end}`;
+    slot.title = data.available ? `${data.available_space_count} spaces available` : 'Full';
+    slot.addEventListener('click', () => selectHour(hour));
+    hourlySlots.push({hour, element: slot, available: data.available});
+    grid.appendChild(slot);
+  }
+}
+function showAvailability(data) {
+  result.style.background = data.available ? '#dcfce7' : '#fee2e2';
+  result.style.color = data.available ? '#166534' : '#991b1b';
+  result.textContent = data.available
+    ? `AVAILABLE — ${data.available_space_count} of ${data.total_usable_space_count} usable spaces remain for the full selected range.`
+    : 'FULL — No parking spaces are available for this entire time range.';
+  button.disabled = !data.available;
+}
+async function checkAvailability() {
+  if (fields.some(field => !field.value)) return;
+  const query = new URLSearchParams({date: fields[0].value, start_time: fields[1].value, end_time: fields[2].value});
+  const response = await fetch("{% url 'back1:booking-availability' %}?" + query);
+  const data = await response.json();
+  if (!response.ok) {
+    result.style.background = '#fee2e2'; result.style.color = '#991b1b'; result.textContent = data.error; button.disabled = true; return;
+  }
+  showAvailability(data);
+}
+fields[0].addEventListener('change', loadHourlySlots);
+</script>
+{% endblock %}

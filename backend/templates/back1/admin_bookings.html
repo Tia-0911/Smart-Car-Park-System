@@ -1,0 +1,44 @@
+{% extends "back1/base.html" %}
+{% block content %}
+<section class="admin-history-page">
+  <header class="history-page-header">
+    <div class="history-title-wrap"><span class="history-title-icon blue">📅</span><div><h1>Booking Management</h1><p>Review and manage all parking bookings for the selected date.</p></div></div>
+    <a class="history-back-button" href="{% url 'back1:admin-dashboard' %}?date={{ viewing_date|date:'Y-m-d' }}">← Back to Dashboard</a>
+  </header>
+
+  <div class="history-date-bar" aria-label="Booking viewing date">
+    <div class="history-date-label"><span>Viewing Date</span><strong>📅 {{ viewing_date|date:"d M Y" }}</strong></div>
+    <div class="history-date-actions">
+      <a href="?date={{ viewing_previous_date|date:'Y-m-d' }}">← Previous Day</a>
+      <a href="?date={% now 'Y-m-d' %}">Today</a>
+      <a href="?date={{ viewing_next_date|date:'Y-m-d' }}">Next Day →</a>
+      <form method="get"><input type="date" name="date" value="{{ viewing_date|date:'Y-m-d' }}"><button type="submit">Apply</button></form>
+    </div>
+  </div>
+
+  <form class="history-filter-card" method="get">
+    <input type="hidden" name="date" value="{{ viewing_date|date:'Y-m-d' }}">
+    <label><span>🔎 Search customer</span><input name="q" value="{{ request.GET.q }}" placeholder="Username or email"></label>
+    <label><span>Status</span><select name="status"><option value="">All statuses</option>{% for value,label in status_choices %}<option value="{{ value }}"{% if request.GET.status == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+    <button class="history-primary-button" type="submit">Filter</button>
+  </form>
+
+  <div class="history-table-card">
+    <div class="history-table-wrap"><table class="history-table">
+      <thead><tr><th>ID</th><th>Customer</th><th>Date/time</th><th>Space</th><th>Status</th><th>Payment</th><th>Normal</th><th>Overstay</th><th>Outstanding</th><th>Created</th><th>Actions</th></tr></thead>
+      <tbody>{% for booking in bookings %}<tr>
+        <td><strong>#{{ booking.id }}</strong></td>
+        <td><strong>{{ booking.user.username }}</strong><small>{{ booking.user.email }}</small></td>
+        <td><strong>{{ booking.booking_date|date:"d M Y" }}</strong><small>{{ booking.start_time|time:"H:i" }}–{{ booking.end_time|time:"H:i" }}</small></td>
+        <td><span class="source-pill">{{ booking.parking_slot }}</span></td>
+        <td><span class="history-pill status-{{ booking.status }}">{{ booking.get_status_display }}</span></td>
+        <td><span class="history-pill payment-{{ booking.payment_status }}">{{ booking.get_payment_status_display }}</span></td>
+        <td class="money-cell">£{{ booking.normal_parking_amount }}</td><td class="money-cell">£{{ booking.overstay_amount }}</td>
+        <td class="money-cell{% if booking.outstanding_balance > 0 %} money-due{% endif %}">£{{ booking.outstanding_balance }}</td>
+        <td><span class="timestamp-stack">{{ booking.created_at|date:"d M Y" }}<small>{{ booking.created_at|time:"h:i A" }}</small></span></td>
+        <td><div class="history-row-actions"><a class="action-edit" href="{% url 'back1:admin-booking-edit' booking.id %}">Edit</a><form method="post" action="{% url 'back1:admin-booking-delete' booking.id %}">{% csrf_token %}<button class="action-delete" type="submit">Delete / Cancel</button></form></div></td>
+      </tr>{% empty %}<tr><td colspan="11"><div class="history-empty"><span>📅</span><strong>No bookings found for this date.</strong><p>Try another date or adjust the filters.</p></div></td></tr>{% endfor %}</tbody>
+    </table></div>
+  </div>
+</section>
+{% endblock %}

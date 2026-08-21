@@ -1,0 +1,50 @@
+{% extends "back1/base.html" %}
+
+{% block content %}
+<section class="dashboard-card modern-card p-4">
+    <div class="section-header">
+        <div>
+            <h1 class="h3 mb-1">Customer Dashboard</h1>
+            <p class="text-secondary mb-0">Welcome, {{ request.user.first_name|default:request.user.username }}.</p>
+        </div>
+    </div>
+
+    <div class="row g-3 mt-2">
+        <div class="col-md-4">
+            <a class="btn btn-primary w-100 py-3" href="{% url 'back1:booking-create' %}">Book Parking</a>
+        </div>
+        <div class="col-md-4">
+            <a class="btn btn-outline-primary w-100 py-3" href="{% url 'back1:bookings' %}">My Booking</a>
+        </div>
+        <div class="col-md-4">
+            <a class="btn btn-outline-secondary w-100 py-3" href="{% url 'back1:profile' %}">Profile</a>
+        </div>
+    </div>
+
+    <div class="mt-4 p-4 bg-light rounded-4">
+        <h2 class="h5">Next Booking</h2>
+        {% if upcoming_booking %}
+            <p class="mb-1">Booking #{{ upcoming_booking.id }}</p>
+            <p class="mb-1"><strong>{{ upcoming_booking.booking_date }}</strong></p>
+            <p class="mb-1">{{ upcoming_booking.start_time }}–{{ upcoming_booking.end_time }}</p>
+            <p class="mb-0">Space {{ upcoming_booking.parking_slot.slot_number }} · {{ upcoming_booking.get_status_display }}</p>
+            <p class="mb-1">Payment: {{ upcoming_booking.get_payment_status_display }}</p>
+            {% if ending_soon %}<p class="text-warning"><strong>Booking ending soon.</strong></p>{% endif %}
+            {% if upcoming_booking.outstanding_balance %}
+                <p class="text-danger"><strong>Overstay £{{ upcoming_booking.overstay_amount }} · Outstanding £{{ upcoming_booking.outstanding_balance }}</strong></p>
+                <a class="btn btn-danger" href="{% url 'back1:overstay-payment' upcoming_booking.id %}">Pay Overstay</a>
+            {% endif %}
+            {% if upcoming_booking.status == 'confirmed' or upcoming_booking.status == 'active' %}
+                <p class="small text-secondary mt-2">Entrance access available from {{ entrance_available_from|time:"H:i" }}.</p>
+                <form class="customer-gate-form d-inline" method="post" action="{% url 'back1:customer-gate-request' upcoming_booking.id 'entrance' %}">{% csrf_token %}<button class="btn btn-success">Open Entrance Gate</button></form>
+            {% endif %}
+            {% if upcoming_booking.status == 'active' or upcoming_booking.status == 'parked' or upcoming_booking.status == 'overtime' %}
+                <form class="customer-gate-form d-inline" method="post" action="{% url 'back1:customer-gate-request' upcoming_booking.id 'exit' %}">{% csrf_token %}<button class="btn btn-warning">Open Exit Gate</button></form>
+            {% endif %}
+        {% else %}
+            <p class="text-secondary mb-0">No upcoming booking.</p>
+        {% endif %}
+    </div>
+</section>
+<script>document.querySelectorAll('.customer-gate-form').forEach(form=>form.addEventListener('submit',async event=>{event.preventDefault();const response=await fetch(form.action,{method:'POST',headers:{'X-CSRFToken':form.querySelector('[name=csrfmiddlewaretoken]').value}});const data=await response.json();window.alert(data.message||data.error);if(response.ok)window.location.reload();}));</script>
+{% endblock %}

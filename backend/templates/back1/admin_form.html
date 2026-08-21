@@ -1,0 +1,12 @@
+{% extends "back1/base.html" %}
+{% block content %}
+<section class="modern-card p-4 mx-auto" style="max-width:720px">
+  <h1 class="h3">{{ title }}</h1>
+  {% if object.booking_date %}<div class="bg-light rounded p-3 mb-3">
+    <strong>Customer:</strong> {{ object.user.username }} ({{ object.user.email }})<br>
+    <strong>Payment:</strong> {{ object.get_payment_status_display }} · Normal £{{ object.normal_parking_amount }} · Overstay £{{ object.overstay_amount }} · Outstanding £{{ object.outstanding_balance }}<br>
+    <strong>Lifecycle:</strong> Entry gate {{ object.entrance_gate_opened_at|default:"—" }} · Left bay {{ object.parking_left_at|default:"—" }} · Exit gate {{ object.exit_gate_opened_at|default:"—" }} · Completed {{ object.completed_at|default:"—" }}
+  </div>{% endif %}
+  <form method="post">{% csrf_token %}{{ form.as_p }}<button class="btn btn-primary">Save</button></form>
+</section>
+{% endblock %}

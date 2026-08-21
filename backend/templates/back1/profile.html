@@ -1,0 +1,14 @@
+{% extends "back1/base.html" %}
+
+{% block content %}
+<section class="dashboard-card modern-card p-4" style="max-width: 760px; margin: 0 auto;">
+    <h1 class="h3">Profile</h1>
+    <p class="text-secondary">Signed in as <strong>{{ request.user.username }}</strong></p>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button class="btn btn-primary" type="submit">Save Profile</button>
+    </form>
+</section>
+{% endblock %}
