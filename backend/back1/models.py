@@ -725,7 +725,6 @@ class GateCommand(models.Model):
     def __str__(self):
         return f"{self.gate.gate_type} {self.action} ({self.status})"
 
-
 # ==========================
 # System Event Log
 # ==========================
@@ -734,12 +733,19 @@ class SystemEvent(models.Model):
 
     EVENT_TYPES = [
         ("vehicle_detected", "Vehicle Detected"),
+
         ("gate_opened", "Gate Opened"),
         ("gate_closed", "Gate Closed"),
+
         ("space_occupied", "Parking Space Occupied"),
         ("space_available", "Parking Space Available"),
+
+        ("led_turned_on", "LED Turned On"),
+        ("led_turned_off", "LED Turned Off"),
+
         ("sensor_offline", "Sensor Offline"),
         ("sensor_online", "Sensor Online"),
+
         ("emergency", "Emergency"),
         ("admin_action", "Admin Action"),
         ("payment", "Payment"),
@@ -805,7 +811,6 @@ class SystemEvent(models.Model):
 
     def __str__(self):
         return f"{self.timestamp} - {self.event_type}"
-
 
 # ==========================
 # Alert
@@ -924,3 +929,133 @@ class EmergencyNotification(models.Model):
 
     def __str__(self):
         return f"{self.emergency} -> {self.recipient}"
+
+
+# ==========================
+# PARKING LED
+# ==========================
+
+class ParkingLED(models.Model):
+
+    parking_slot = models.ForeignKey(
+        ParkingSlot,
+        on_delete=models.CASCADE,
+        related_name="leds",
+    )
+
+    led_name = models.CharField(
+        max_length=50,
+        unique=True,
+    )
+
+    status = models.CharField(
+        max_length=10,
+        choices=[
+            ("off", "Off"),
+            ("on", "On"),
+        ],
+        default="off",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = ["parking_slot", "led_name"]
+
+    def __str__(self):
+        return self.led_name
+
+# ==========================
+# LED COMMAND
+# ==========================
+
+class LEDCommand(models.Model):
+
+    ACTION_CHOICES = [
+        ("on", "On"),
+        ("off", "Off"),
+    ]
+
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("executing", "Executing"),
+        ("succeeded", "Succeeded"),
+        ("failed", "Failed"),
+        ("expired", "Expired"),
+    ]
+
+    REQUESTED_VIA_CHOICES = [
+        ("admin", "Admin"),
+        ("customer", "Customer"),
+        ("lifecycle", "Lifecycle"),
+    ]
+
+    led = models.ForeignKey(
+        ParkingLED,
+        on_delete=models.CASCADE,
+        related_name="commands",
+    )
+
+    parking_slot = models.ForeignKey(
+        ParkingSlot,
+        on_delete=models.CASCADE,
+        related_name="led_commands",
+    )
+
+    action = models.CharField(
+        max_length=10,
+        choices=ACTION_CHOICES,
+    )
+
+    status = models.CharField(
+        max_length=12,
+        choices=STATUS_CHOICES,
+        default="pending",
+        db_index=True,
+    )
+
+    requested_via = models.CharField(
+        max_length=12,
+        choices=REQUESTED_VIA_CHOICES,
+        default="admin",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+    )
+
+    expires_at = models.DateTimeField(
+        db_index=True,
+    )
+
+    acknowledged_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    completed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    error_message = models.CharField(
+        max_length=255,
+        blank=True,
+    )
+
+    class Meta:
+        ordering = ["created_at", "id"]
+
+    def __str__(self):
+        return (
+            f"{self.led.led_name} "
+            f"{self.action} "
+            f"({self.status})"
+        )

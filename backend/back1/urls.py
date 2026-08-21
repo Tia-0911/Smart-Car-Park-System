@@ -192,6 +192,29 @@ urlpatterns = [
         name="device-gate-commands",
     ),
     path(
+        "api/device/leds/commands/",
+        views.device_led_commands,
+        name="device_led_commands",
+    ),
+
+    path(
+        "api/device/leds/commands/<int:command_id>/claim/",
+        views.device_claim_led_command,
+        name="device_claim_led_command",
+    ),
+
+    path(
+        "api/device/leds/commands/<int:command_id>/acknowledge/",
+        views.device_acknowledge_led_command,
+        name="device_acknowledge_led_command",
+    ),
+
+    path(
+        "api/admin/leds/commands/",
+        views.create_led_command,
+        name="create_led_command",
+    ),
+    path(
         "api/device/gates/commands/<int:command_id>/claim/",
         views.device_claim_gate_command,
         name="device-claim-gate-command",

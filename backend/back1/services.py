@@ -8,7 +8,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.utils import timezone
 
-from .models import Alert, Booking, Emergency, EmergencyNotification, Gate, GateCommand, ParkingRate, ParkingSlot, SensorData, SensorReadingHistory, SystemEvent, Transaction, Wallet
+from .models import Alert, Booking, Emergency, EmergencyNotification, Gate, GateCommand, ParkingRate, ParkingSlot, SensorData, SensorReadingHistory, SystemEvent, Transaction, Wallet,  ParkingLED, LEDCommand
 
 PENDING_HOLD_MINUTES = 15
 CAPACITY_STATUSES = ("pending", "confirmed", "active", "parked")
@@ -556,45 +556,135 @@ def _event(
 
 @transaction.atomic
 def update_logical_sensor(*, sensor_id, value, condition_status=None, now=None):
+
     if sensor_id not in LOGICAL_SENSORS:
         raise ValueError("Unknown sensor identifier.")
+
     now = now or timezone.now()
+
     sensor_type, location, slot_number = LOGICAL_SENSORS[sensor_id]
-    slot = ParkingSlot.objects.get(slot_number=slot_number) if slot_number else None
+
+    slot = (
+        ParkingSlot.objects.get(slot_number=slot_number)
+        if slot_number
+        else None
+    )
+
     sensor, _ = SensorData.objects.select_for_update().get_or_create(
         sensor_id=sensor_id,
-        defaults={"sensor_type": sensor_type, "location": location, "parking_slot": slot, "value": "clear"},
+        defaults={
+            "sensor_type": sensor_type,
+            "location": location,
+            "parking_slot": slot,
+            "value": "clear",
+        },
     )
+
     previous = sensor_is_detected(sensor)
+
     previous_abnormal = sensor_condition_is_abnormal(sensor)
+
+    # ========================================================
+    # NORMALIZE SENSOR VALUE
+    # ========================================================
+
     if sensor_type in {"temperature", "humidity"}:
+
         try:
             Decimal(str(value))
+
         except Exception as exc:
-            raise ValueError(f"{sensor_type.title()} value must be numeric.") from exc
+
+            raise ValueError(
+                f"{sensor_type.title()} value must be numeric."
+            ) from exc
+
         normalized = str(value).strip()
+
     else:
-        normalized = "detected" if str(value).strip().lower() in {
-            "1", "true", "detected", "occupied", "emergency", "active",
-            "fire", "fire detected",
-        } else "clear"
+
+        normalized = (
+            "detected"
+            if str(value).strip().lower()
+            in {
+                "1",
+                "true",
+                "detected",
+                "occupied",
+                "emergency",
+                "active",
+                "fire",
+                "fire detected",
+            }
+            else "clear"
+        )
+
     current = normalized == "detected"
+
+    # ========================================================
+    # UPDATE SENSOR
+    # ========================================================
+
     sensor.sensor_type = sensor_type
+
     sensor.location = location
+
     sensor.parking_slot = slot
+
     sensor.value = normalized
+
     sensor.status = "active"
+
     sensor.connection_status = "online"
-    if condition_status in {"normal", "abnormal"}:
+
+    # ========================================================
+    # CONDITION STATUS
+    # ========================================================
+
+    if condition_status in {
+        "normal",
+        "abnormal"
+    }:
+
         sensor.condition_status = condition_status
-    elif sensor_type in {"temperature", "humidity"}:
-        sensor.condition_status = "abnormal" if _numeric_sensor_is_abnormal(sensor_type, normalized) else "normal"
-    elif sensor_type in {"fire", "emergency"}:
-        sensor.condition_status = "abnormal" if current else "normal"
+
+    elif sensor_type in {
+        "temperature",
+        "humidity"
+    }:
+
+        sensor.condition_status = (
+            "abnormal"
+            if _numeric_sensor_is_abnormal(
+                sensor_type,
+                normalized
+            )
+            else "normal"
+        )
+
+    elif sensor_type in {
+        "fire",
+        "emergency"
+    }:
+
+        sensor.condition_status = (
+            "abnormal"
+            if current
+            else "normal"
+        )
+
     else:
+
         sensor.condition_status = "normal"
+
     sensor.last_reading_at = now
+
     sensor.save()
+
+    # ========================================================
+    # SENSOR HISTORY
+    # ========================================================
+
     SensorReadingHistory.objects.create(
         sensor_id=sensor.sensor_id,
         sensor_type=sensor.sensor_type,
@@ -603,42 +693,109 @@ def update_logical_sensor(*, sensor_id, value, condition_status=None, now=None):
         connection_status=sensor.connection_status,
         received_at=now,
     )
-    sync_sensor_alerts(sensor, now=now)
 
-    # Reconcile the denormalized physical flag on every parking-sensor
-    # reading. This repairs stale/inconsistent slot state even when a device
-    # repeats the same value, while events remain transition-only below.
-    if sensor_type == "parking" and slot.is_physically_occupied != current:
+    sync_sensor_alerts(
+        sensor,
+        now=now
+    )
+
+    # ========================================================
+    # PARKING SLOT PHYSICAL STATUS
+    # ========================================================
+
+    if (
+        sensor_type == "parking"
+        and slot.is_physically_occupied != current
+    ):
+
         slot.is_physically_occupied = current
+
         if current:
+
             slot.status = "occupied"
+
         elif not slot.is_enabled:
+
             slot.status = "disabled"
+
         elif slot.is_under_maintenance:
+
             slot.status = "maintenance"
+
         elif slot.is_backup:
+
             slot.status = "backup"
+
         else:
-            slot.status = "reserved" if slot.is_booking_reserved else "available"
-        slot.save(update_fields=["is_physically_occupied", "status", "updated_at"])
+
+            slot.status = (
+                "reserved"
+                if slot.is_booking_reserved
+                else "available"
+            )
+
+        slot.save(
+            update_fields=[
+                "is_physically_occupied",
+                "status",
+                "updated_at",
+            ]
+        )
+
+    # ========================================================
+    # NO SENSOR STATE CHANGE
+    # ========================================================
 
     if previous == current:
+
         return sensor, False
 
+    # ========================================================
+    # ENTRANCE SENSOR
+    # ========================================================
+
     if sensor_type == "entrance":
+
         _event(
-            "Vehicle arrived at Entrance." if current else "Vehicle cleared Entrance.",
-            event_type="vehicle_detected", sensor=sensor,
-            source="entrance_sensor", timestamp=now,
+            (
+                "Vehicle arrived at Entrance."
+                if current
+                else
+                "Vehicle cleared Entrance."
+            ),
+            event_type="vehicle_detected",
+            sensor=sensor,
+            source="entrance_sensor",
+            timestamp=now,
         )
+
         if not current:
-            gate = Gate.objects.filter(gate_type="entrance").first()
+
+            gate = Gate.objects.filter(
+                gate_type="entrance"
+            ).first()
+
             booking = Booking.objects.filter(
                 entrance_gate_opened_at__isnull=False,
-                status__in=["confirmed", "active"],
-            ).order_by("-entrance_gate_opened_at").first()
+                status__in=[
+                    "confirmed",
+                    "active",
+                ],
+            ).order_by(
+                "-entrance_gate_opened_at"
+            ).first()
+
             if gate and gate.is_open:
-                gate.is_open = False; gate.save(update_fields=["is_open", "updated_at"])
+
+                gate.is_open = False
+
+                gate.save(
+                    update_fields=[
+                        "is_open",
+                        "updated_at",
+                    ]
+                )
+
                 create_gate_command(
                     gate=gate,
                     action="close",
@@ -646,25 +803,69 @@ def update_logical_sensor(*, sensor_id, value, condition_status=None, now=None):
                     booking=booking,
                     now=now,
                 )
+
                 _event(
                     "Entrance Gate closed after vehicle passage.",
-                    event_type="gate_closed", sensor=sensor, booking=booking,
-                    slot=booking.parking_slot if booking else None, gate=gate,
-                    source="gate_lifecycle", timestamp=now,
+                    event_type="gate_closed",
+                    sensor=sensor,
+                    booking=booking,
+                    slot=(
+                        booking.parking_slot
+                        if booking
+                        else None
+                    ),
+                    gate=gate,
+                    source="gate_lifecycle",
+                    timestamp=now,
                 )
+
+    # ========================================================
+    # EXIT SENSOR
+    # ========================================================
+
     elif sensor_type == "exit":
+
         _event(
-            "Vehicle arrived at Exit." if current else "Vehicle cleared Exit.",
-            event_type="vehicle_detected", sensor=sensor,
-            source="exit_sensor", timestamp=now,
+            (
+                "Vehicle arrived at Exit."
+                if current
+                else
+                "Vehicle cleared Exit."
+            ),
+            event_type="vehicle_detected",
+            sensor=sensor,
+            source="exit_sensor",
+            timestamp=now,
         )
+
         if not current:
-            gate = Gate.objects.filter(gate_type="exit").first()
+
+            gate = Gate.objects.filter(
+                gate_type="exit"
+            ).first()
+
             booking = Booking.objects.filter(
-                exit_gate_opened_at__isnull=False, status__in=["active", "parked", "overtime"]
-            ).order_by("-exit_gate_opened_at").first()
+                exit_gate_opened_at__isnull=False,
+                status__in=[
+                    "active",
+                    "parked",
+                    "overtime",
+                ],
+            ).order_by(
+                "-exit_gate_opened_at"
+            ).first()
+
             if gate and gate.is_open:
-                gate.is_open = False; gate.save(update_fields=["is_open", "updated_at"])
+
+                gate.is_open = False
+
+                gate.save(
+                    update_fields=[
+                        "is_open",
+                        "updated_at",
+                    ]
+                )
+
                 create_gate_command(
                     gate=gate,
                     action="close",
@@ -672,52 +873,280 @@ def update_logical_sensor(*, sensor_id, value, condition_status=None, now=None):
                     booking=booking,
                     now=now,
                 )
+
                 _event(
                     "Exit Gate closed after vehicle passage.",
-                    event_type="gate_closed", sensor=sensor, booking=booking,
-                    slot=booking.parking_slot if booking else None, gate=gate,
-                    source="gate_lifecycle", timestamp=now,
+                    event_type="gate_closed",
+                    sensor=sensor,
+                    booking=booking,
+                    slot=(
+                        booking.parking_slot
+                        if booking
+                        else None
+                    ),
+                    gate=gate,
+                    source="gate_lifecycle",
+                    timestamp=now,
                 )
+
             if booking:
-                booking.status = "completed"; booking.completed_at = now; booking.actual_exit_time = now
-                booking.save(update_fields=["status", "completed_at", "actual_exit_time", "updated_at"])
-                _event(
-                    f"Vehicle exited the car park and Booking #{booking.id} was completed.",
-                    sensor=sensor, booking=booking, slot=booking.parking_slot,
-                    source="booking_lifecycle", timestamp=now,
+
+                booking.status = "completed"
+
+                booking.completed_at = now
+
+                booking.actual_exit_time = now
+
+                booking.save(
+                    update_fields=[
+                        "status",
+                        "completed_at",
+                        "actual_exit_time",
+                        "updated_at",
+                    ]
                 )
+
+                _event(
+                    (
+                        f"Vehicle exited the car park "
+                        f"and Booking #{booking.id} "
+                        f"was completed."
+                    ),
+                    sensor=sensor,
+                    booking=booking,
+                    slot=booking.parking_slot,
+                    source="booking_lifecycle",
+                    timestamp=now,
+                )
+
+    # ========================================================
+    # PARKING SENSOR
+    # ========================================================
+
     elif sensor_type == "parking":
+
+        # ----------------------------------------------------
+        # UPDATE PARKING SLOT
+        # ----------------------------------------------------
+
         slot.is_physically_occupied = current
-        slot.status = "occupied" if current else ("reserved" if slot.is_booking_reserved else "available")
-        slot.save(update_fields=["is_physically_occupied", "status", "updated_at"])
-        booking = Booking.objects.filter(
-            parking_slot=slot, booking_date=timezone.localdate(now), status__in=["confirmed", "active", "parked", "overtime"]
-        ).order_by("start_time").first()
-        _event(
-            f"Vehicle occupied {slot.slot_number}." if current else f"Vehicle left {slot.slot_number}.",
-            event_type="space_occupied" if current else "space_available",
-            sensor=sensor, booking=booking, slot=slot,
-            source="parking_sensor", timestamp=now,
-        )
-        if current and booking and booking.status == "confirmed":
-            booking.status = "active"; booking.actual_arrival_time = booking.actual_arrival_time or now
-            booking.save(update_fields=["status", "actual_arrival_time", "updated_at"])
-        elif not current and booking:
-            booking.parking_left_at = now
-            booking.save(update_fields=["parking_left_at", "updated_at"])
-            finalize_overstay(booking, now=now)
-    elif sensor_type == "emergency":
-        _event("Emergency sensor activated." if current else "Emergency sensor returned to normal.", sensor=sensor)
-        if current:
-            Emergency.objects.get_or_create(
-                emergency_type="sensor_error", status="active",
-                defaults={"description": "Emergency sensor EMERGENCY_01 activated."},
+
+        slot.status = (
+            "occupied"
+            if current
+            else (
+                "reserved"
+                if slot.is_booking_reserved
+                else "available"
             )
+        )
+
+        slot.save(
+            update_fields=[
+                "is_physically_occupied",
+                "status",
+                "updated_at",
+            ]
+        )
+
+        # ----------------------------------------------------
+        # VEHICLE DETECTED
+        # TURN PARKING LED OFF
+        # ----------------------------------------------------
+
+        if current:
+
+            led = ParkingLED.objects.filter(
+                parking_slot=slot
+            ).first()
+
+            if led and led.status == "on":
+
+                LEDCommand.objects.create(
+                    led=led,
+                    parking_slot=slot,
+                    action="off",
+                    status="pending",
+                    requested_via="lifecycle",
+                    expires_at=(
+                        now
+                        + timezone.timedelta(
+                            seconds=30
+                        )
+                    ),
+                )
+
+                print(
+                    f"{slot.slot_number}: "
+                    f"Vehicle detected -> "
+                    f"{led.led_name} OFF command created."
+                )
+
+        # ----------------------------------------------------
+        # FIND ACTIVE BOOKING
+        # ----------------------------------------------------
+
+        booking = Booking.objects.filter(
+            parking_slot=slot,
+            booking_date=timezone.localdate(now),
+            status__in=[
+                "confirmed",
+                "active",
+                "parked",
+                "overtime",
+            ],
+        ).order_by(
+            "start_time"
+        ).first()
+
+        # ----------------------------------------------------
+        # SYSTEM EVENT
+        # ----------------------------------------------------
+
+        _event(
+            (
+                f"Vehicle occupied "
+                f"{slot.slot_number}."
+                if current
+                else
+                f"Vehicle left "
+                f"{slot.slot_number}."
+            ),
+            event_type=(
+                "space_occupied"
+                if current
+                else
+                "space_available"
+            ),
+            sensor=sensor,
+            booking=booking,
+            slot=slot,
+            source="parking_sensor",
+            timestamp=now,
+        )
+
+        # ----------------------------------------------------
+        # BOOKING BECOMES ACTIVE
+        # ----------------------------------------------------
+
+        if (
+            current
+            and booking
+            and booking.status == "confirmed"
+        ):
+
+            booking.status = "active"
+
+            booking.actual_arrival_time = (
+                booking.actual_arrival_time
+                or now
+            )
+
+            booking.save(
+                update_fields=[
+                    "status",
+                    "actual_arrival_time",
+                    "updated_at",
+                ]
+            )
+
+        # ----------------------------------------------------
+        # VEHICLE LEFT
+        # ----------------------------------------------------
+
+        elif not current and booking:
+
+            booking.parking_left_at = now
+
+            booking.save(
+                update_fields=[
+                    "parking_left_at",
+                    "updated_at",
+                ]
+            )
+
+            finalize_overstay(
+                booking,
+                now=now
+            )
+
+    # ========================================================
+    # EMERGENCY SENSOR
+    # ========================================================
+
+    elif sensor_type == "emergency":
+
+        _event(
+            (
+                "Emergency sensor activated."
+                if current
+                else
+                "Emergency sensor returned to normal."
+            ),
+            sensor=sensor
+        )
+
+        if current:
+
+            Emergency.objects.get_or_create(
+                emergency_type="sensor_error",
+                status="active",
+                defaults={
+                    "description":
+                    "Emergency sensor EMERGENCY_01 activated."
+                },
+            )
+
+    # ========================================================
+    # FIRE SENSOR
+    # ========================================================
+
     elif sensor_type == "fire" and previous != current:
-        _event("Fire detected." if current else "Fire sensor returned to normal.", sensor=sensor, source="sensor_safety")
-    elif sensor_type in {"temperature", "humidity"} and previous_abnormal != sensor_condition_is_abnormal(sensor):
-        state = "unsafe" if sensor_condition_is_abnormal(sensor) else "safe"
-        _event(f"{sensor.location} {sensor_type} sensor became {state}.", sensor=sensor, source="sensor_environment")
+
+        _event(
+            (
+                "Fire detected."
+                if current
+                else
+                "Fire sensor returned to normal."
+            ),
+            sensor=sensor,
+            source="sensor_safety",
+        )
+
+    # ========================================================
+    # TEMPERATURE / HUMIDITY
+    # ========================================================
+
+    elif (
+        sensor_type in {
+            "temperature",
+            "humidity",
+        }
+        and previous_abnormal
+        != sensor_condition_is_abnormal(sensor)
+    ):
+
+        state = (
+            "unsafe"
+            if sensor_condition_is_abnormal(sensor)
+            else "safe"
+        )
+
+        _event(
+            (
+                f"{sensor.location} "
+                f"{sensor_type} sensor "
+                f"became {state}."
+            ),
+            sensor=sensor,
+            source="sensor_environment",
+        )
+
+    # ========================================================
+    # RETURN
+    # ========================================================
+
     return sensor, True
 
 

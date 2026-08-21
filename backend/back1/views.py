@@ -33,6 +33,8 @@ from rest_framework.response import Response
 from rest_framework import status
 
 
+
+
 from .models import (
     ParkingSlot,
     SensorData,
@@ -46,6 +48,8 @@ from .models import (
     SystemEvent,
     ParkingRate,
     Alert,
+    ParkingLED,
+    LEDCommand,
     EmergencyNotification,
 )
 
@@ -1447,36 +1451,360 @@ def sensor_history(request):
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def update_sensor(request):
+
+    # ============================================================
+    # AUTHENTICATION
+    # ============================================================
+
     is_device = _device_api_key_is_valid(request)
+
     if not is_device and not _is_admin(request.user):
-        return Response({"error": "Valid device authentication is required."}, status=401 if not request.user.is_authenticated else 403)
-    try:
-        sensor, changed = update_logical_sensor(
-            sensor_id=request.data.get("sensor_id", ""),
-            value=request.data.get("value", ""),
-            condition_status=request.data.get("condition_status"),
+
+        return Response(
+            {
+                "error": "Valid device authentication is required."
+            },
+            status=401 if not request.user.is_authenticated else 403
         )
+
+    # ============================================================
+    # UPDATE SENSOR
+    # ============================================================
+
+    try:
+
+        sensor_id = request.data.get(
+            "sensor_id",
+            ""
+        )
+
+        value = request.data.get(
+            "value",
+            ""
+        )
+
+        sensor, changed = update_logical_sensor(
+            sensor_id=sensor_id,
+            value=value,
+            condition_status=request.data.get(
+                "condition_status"
+            ),
+        )
+
     except ValueError as exc:
-        if _is_admin(request.user) and request.data.get("sensor_type"):
-            sensor, created = SensorData.objects.update_or_create(
-                sensor_id=request.data.get("sensor_id"),
+
+        sensor_type = request.data.get("sensor_type")
+
+        sensor_id = request.data.get("sensor_id")
+
+        value = request.data.get("value", "")
+
+
+        # ========================================================
+        # AUTOMATIC DEVICE SENSOR REGISTRATION
+        # ========================================================
+        #
+        # Raspberry Pi sends a sensor that does not exist yet.
+        #
+        # Example:
+        #
+        # FLAME_01
+        # sensor_type = fire
+        #
+        # The backend automatically creates it.
+        #
+        # This is especially useful when moving to Azure/cloud.
+        # ========================================================
+
+        if is_device and sensor_id and sensor_type:
+
+            sensor, created = SensorData.objects.get_or_create(
+
+                sensor_id=sensor_id,
+
                 defaults={
-                    "sensor_type": request.data.get("sensor_type"),
-                    "location": request.data.get("location", ""),
-                    "value": request.data.get("value", ""),
-                    "last_reading_at": timezone.now(),
-                    "connection_status": "online",
+
+                    "sensor_type":
+                    sensor_type,
+
+                    "location":
+                    request.data.get(
+                        "location",
+                        ""
+                    ),
+
+                    "value":
+                    value,
+
+                    "status":
+                    request.data.get(
+                        "status",
+                        "active"
+                    ),
+
+                    "connection_status":
+                    "online",
+
+                    "condition_status":
+                    request.data.get(
+                        "condition_status",
+                        "normal"
+                    ),
+
+                    "last_reading_at":
+                    timezone.now(),
+
                 },
             )
-            return Response({"message": "Sensor updated", "sensor_id": sensor.sensor_id, "changed": created}, status=201)
-        return Response({"error": str(exc)}, status=400)
-    return Response({"message": "Sensor updated", "sensor_id": sensor.sensor_id, "changed": changed})
 
 
+            # ====================================================
+            # SENSOR ALREADY EXISTS
+            # ====================================================
+
+            if not created:
+
+                sensor.value = value
+
+                sensor.connection_status = "online"
+
+                sensor.last_reading_at = timezone.now()
 
 
+                if request.data.get(
+                    "condition_status"
+                ):
+
+                    sensor.condition_status = (
+                        request.data.get(
+                            "condition_status"
+                        )
+                    )
 
 
+                sensor.save(
+
+                    update_fields=[
+
+                        "value",
+
+                        "connection_status",
+
+                        "condition_status",
+
+                        "last_reading_at",
+
+                        "updated_at",
+
+                    ]
+
+                )
+
+
+            print(
+                f"Device sensor "
+                f"{'created' if created else 'updated'}: "
+                f"{sensor_id}"
+            )
+
+
+            return Response(
+
+                {
+
+                    "message":
+                    "Sensor registered and updated",
+
+                    "sensor_id":
+                    sensor.sensor_id,
+
+                    "sensor_type":
+                    sensor.sensor_type,
+
+                    "created":
+                    created,
+
+                },
+
+                status=201 if created else 200
+
+            )
+
+
+        # ========================================================
+        # EXISTING ADMIN BEHAVIOUR
+        # ========================================================
+
+        if _is_admin(request.user) and sensor_type:
+
+            sensor, created = (
+                SensorData.objects.update_or_create(
+
+                    sensor_id=sensor_id,
+
+                    defaults={
+
+                        "sensor_type":
+                        sensor_type,
+
+                        "location":
+                        request.data.get(
+                            "location",
+                            ""
+                        ),
+
+                        "value":
+                        value,
+
+                        "last_reading_at":
+                        timezone.now(),
+
+                        "connection_status":
+                        "online",
+
+                    },
+
+                )
+            )
+
+
+            return Response(
+
+                {
+
+                    "message":
+                    "Sensor updated",
+
+                    "sensor_id":
+                    sensor.sensor_id,
+
+                    "changed":
+                    created,
+
+                },
+
+                status=201
+
+            )
+
+
+        # ========================================================
+        # ORIGINAL ERROR
+        # ========================================================
+
+        return Response(
+
+            {
+
+                "error":
+                str(exc)
+
+            },
+
+            status=400
+
+        )
+
+    # ============================================================
+    # PARKING SENSOR → LED OFF
+    # ============================================================
+
+    PARKING_SENSOR_TO_SLOT = {
+
+        "PARK_A01": "A01",
+
+        "PARK_A02": "A02",
+
+        "PARK_A03": "A03",
+
+        "PARK_A04": "A04",
+
+    }
+
+    slot_number = PARKING_SENSOR_TO_SLOT.get(
+        sensor_id
+    )
+
+    if (
+        slot_number
+        and value == "detected"
+    ):
+
+        try:
+
+            parking_slot = ParkingSlot.objects.get(
+                slot_number=slot_number
+            )
+
+            led = ParkingLED.objects.get(
+                parking_slot=parking_slot
+            )
+
+            # ----------------------------------------------------
+            # Only create OFF command if LED is currently ON
+            # ----------------------------------------------------
+
+            if led.status == "on":
+
+                LEDCommand.objects.create(
+
+                    led=led,
+
+                    parking_slot=parking_slot,
+
+                    action="off",
+
+                    status="pending",
+
+                    requested_via="lifecycle",
+
+                    expires_at=(
+                        timezone.now()
+                        + timezone.timedelta(
+                            seconds=30
+                        )
+                    ),
+                )
+
+                print(
+                    f"{slot_number}: "
+                    f"vehicle detected → "
+                    f"{led.led_name} OFF command created"
+                )
+
+        except ParkingSlot.DoesNotExist:
+
+            print(
+                f"Parking slot {slot_number} not found."
+            )
+
+        except ParkingLED.DoesNotExist:
+
+            print(
+                f"LED for slot {slot_number} not found."
+            )
+
+    # ============================================================
+    # RESPONSE
+    # ============================================================
+
+    return Response(
+        {
+            "message": "Sensor updated",
+
+            "sensor_id":
+            sensor.sensor_id,
+
+            "changed":
+            changed,
+
+            "parking_slot":
+            slot_number,
+
+            "vehicle_detected":
+            value == "detected",
+        }
+    )
 
 # ==========================
 # REVENUE DASHBOARD API
@@ -2343,367 +2671,1029 @@ def resolve_emergency(request, emergency_id):
         emergency.status
 
     })
-
-
-
-
-
-
-
+    
 
 # ==========================
 # FIRE SENSOR CHECK
 # ==========================
 
-
 @api_view(["GET"])
 @permission_classes([IsAdminUser])
 def fire_sensor_check(request):
 
-
     sensors = SensorData.objects.filter(
-
         sensor_type="fire"
-
     )
-
-
 
     alerts = []
 
-
-
     for sensor in sensors:
 
+        value = str(
+            sensor.value
+        ).strip().lower()
 
-        try:
+        # Digital flame sensor
+        #
+        # Raspberry Pi sends:
+        # detected = flame detected
+        # clear    = no flame
 
-
-            value = float(
-                sensor.value
-            )
-
-
-        except:
-
-
-            value = 0
-
-
-
-
-        if value > 50:
-
+        if value == "detected":
 
             alerts.append({
 
                 "sensor_id":
                 sensor.sensor_id,
 
-
                 "location":
                 sensor.location,
 
-
                 "value":
-                value,
-
+                sensor.value,
 
                 "status":
                 "danger"
 
             })
 
-
-
-
-
     return Response({
 
         "fire_detected":
         len(alerts) > 0,
-
 
         "alerts":
         alerts
 
     })
 
+# ============================================================
+# CREATE PARKING LED COMMAND AFTER SUCCESSFUL GATE OPEN
+# ============================================================
 
+def create_parking_led_command_from_gate(gate_command):
+    """
+    When an entrance gate successfully opens for a booking,
+    create a GREEN LED command for the booked parking slot.
+    """
 
+    # --------------------------------------------------------
+    # Only process OPEN commands
+    # --------------------------------------------------------
 
+    if gate_command.action != "open":
+        return None
 
+    # --------------------------------------------------------
+    # Only process entrance gate
+    # --------------------------------------------------------
 
+    if gate_command.gate.gate_type not in (
+        "entrance",
+        "entry",
+    ):
+        return None
 
+    # --------------------------------------------------------
+    # Gate command must have a booking
+    # --------------------------------------------------------
 
+    if not gate_command.booking:
+        return None
 
-# ==========================
+    # --------------------------------------------------------
+    # Booking must have a parking slot
+    # --------------------------------------------------------
+
+    parking_slot = gate_command.booking.parking_slot
+
+    if not parking_slot:
+        return None
+
+    # --------------------------------------------------------
+    # Find GREEN LED for this parking slot
+    # --------------------------------------------------------
+
+    try:
+
+        green_led = ParkingLED.objects.get(
+            parking_slot=parking_slot,
+            led_type="green",
+        )
+
+    except ParkingLED.DoesNotExist:
+
+        print(
+            f"No green LED found for slot "
+            f"{parking_slot.slot_number}"
+        )
+
+        return None
+
+    # --------------------------------------------------------
+    # Prevent duplicate pending/executing command
+    # --------------------------------------------------------
+
+    existing_command = LEDCommand.objects.filter(
+        led=green_led,
+        action="on",
+        status__in=[
+            "pending",
+            "executing",
+        ],
+    ).first()
+
+    if existing_command:
+
+        return existing_command
+
+    # --------------------------------------------------------
+    # Create LED command
+    # --------------------------------------------------------
+
+    now = timezone.now()
+
+    led_command = LEDCommand.objects.create(
+
+        led=green_led,
+
+        parking_slot=parking_slot,
+
+        action="on",
+
+        status="pending",
+
+        requested_via="lifecycle",
+
+        expires_at=(
+            now + timezone.timedelta(seconds=30)
+        ),
+    )
+
+    # --------------------------------------------------------
+    # System event
+    # --------------------------------------------------------
+
+    SystemEvent.objects.create(
+
+        event_type="other",
+
+        source="gate_led",
+
+        description=(
+            f"Entrance gate opened successfully. "
+            f"Green LED command created for "
+            f"parking slot "
+            f"{parking_slot.slot_number}."
+        ),
+
+        booking=gate_command.booking,
+
+        parking_slot=parking_slot,
+
+        gate=gate_command.gate,
+    )
+
+    print(
+        f"LED command {led_command.id} created for "
+        f"slot {parking_slot.slot_number}"
+    )
+
+    return led_command
+# ============================================================
 # GATE API
-# ==========================
-
+# ============================================================
 
 @api_view(["GET"])
 @permission_classes([IsAdminUser])
 def gates_api(request):
 
-
     gates = Gate.objects.all()
 
-
-
     serializer = GateSerializer(
-
         gates,
-
         many=True
-
     )
-
-
 
     return Response(
-
         serializer.data
-
     )
 
+
+# ============================================================
+# DEVICE GATE COMMANDS
+# ============================================================
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def device_gate_commands(request):
+
+    # --------------------------------------------------------
+    # DEVICE AUTHENTICATION
+    # --------------------------------------------------------
+
     if not _device_api_key_is_valid(request):
+
         return Response(
-            {"error": "Valid device authentication is required."}, status=401
+            {
+                "error": (
+                    "Valid device authentication "
+                    "is required."
+                )
+            },
+            status=401
         )
+
+    # --------------------------------------------------------
+    # CURRENT TIME
+    # --------------------------------------------------------
+
     now = timezone.now()
-    expire_gate_commands(now=now)
+
+    # --------------------------------------------------------
+    # EXPIRE OLD COMMANDS
+    # --------------------------------------------------------
+
+    expire_gate_commands(
+        now=now
+    )
+
+    # --------------------------------------------------------
+    # GET PENDING COMMANDS
+    # --------------------------------------------------------
+
     commands = GateCommand.objects.filter(
-        status="pending", expires_at__gt=now
-    ).select_related("gate").order_by("created_at", "id")
-    return Response({
-        "commands": [
+        status="pending",
+        expires_at__gt=now,
+    ).select_related(
+        "gate",
+        "booking",
+        "booking__parking_slot",
+    ).order_by(
+        "created_at",
+        "id",
+    )
+
+    # --------------------------------------------------------
+    # BUILD RESPONSE
+    # --------------------------------------------------------
+
+    command_data = []
+
+    for command in commands:
+
+        booking = command.booking
+
+        parking_slot = None
+
+        if booking:
+
+            parking_slot = booking.parking_slot
+
+        command_data.append(
             {
                 "id": command.id,
+
                 "gate_id": command.gate_id,
+
                 "gate": command.gate.gate_type,
+
+                "gate_name": command.gate.gate_name,
+
                 "action": command.action,
+
                 "status": command.status,
+
+                "booking_id": (
+                    booking.id
+                    if booking
+                    else None
+                ),
+
+                "slot_number": (
+                    parking_slot.slot_number
+                    if parking_slot
+                    else None
+                ),
+
                 "created_at": command.created_at,
+
                 "expires_at": command.expires_at,
             }
-            for command in commands
-        ]
-    })
+        )
 
+    return Response(
+        {
+            "commands": command_data
+        }
+    )
+
+
+# ============================================================
+# CLAIM GATE COMMAND
+# ============================================================
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
-def device_claim_gate_command(request, command_id):
+def device_claim_gate_command(
+    request,
+    command_id
+):
+
+    # --------------------------------------------------------
+    # DEVICE AUTHENTICATION
+    # --------------------------------------------------------
+
     if not _device_api_key_is_valid(request):
+
         return Response(
-            {"error": "Valid device authentication is required."}, status=401
+            {
+                "error": (
+                    "Valid device authentication "
+                    "is required."
+                )
+            },
+            status=401
         )
+
+    # --------------------------------------------------------
+    # CLAIM COMMAND
+    # --------------------------------------------------------
+
     try:
-        command = claim_gate_command(command_id=command_id)
+
+        command = claim_gate_command(
+            command_id=command_id
+        )
+
     except GateCommand.DoesNotExist:
-        return Response({"error": "Gate command not found."}, status=404)
-    except ValueError as exc:
-        return Response({"error": str(exc)}, status=409)
-    return Response({
-        "id": command.id,
-        "gate": command.gate.gate_type,
-        "action": command.action,
-        "status": command.status,
-        "expires_at": command.expires_at,
-    })
 
+        return Response(
+            {
+                "error": "Gate command not found."
+            },
+            status=404
+        )
+
+    except ValueError as exc:
+
+        return Response(
+            {
+                "error": str(exc)
+            },
+            status=409
+        )
+
+    # --------------------------------------------------------
+    # BOOKING / SLOT
+    # --------------------------------------------------------
+
+    booking = command.booking
+
+    parking_slot = None
+
+    if booking:
+
+        parking_slot = booking.parking_slot
+
+    # --------------------------------------------------------
+    # RESPONSE
+    # --------------------------------------------------------
+
+    return Response(
+        {
+            "id": command.id,
+
+            "gate_id": command.gate_id,
+
+            "gate": command.gate.gate_type,
+
+            "gate_name": command.gate.gate_name,
+
+            "action": command.action,
+
+            "status": command.status,
+
+            "booking_id": (
+                booking.id
+                if booking
+                else None
+            ),
+
+            "slot_number": (
+                parking_slot.slot_number
+                if parking_slot
+                else None
+            ),
+
+            "expires_at": command.expires_at,
+        }
+    )
+
+# ============================================================
+# ACKNOWLEDGE GATE COMMAND
+# ============================================================
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
-def device_acknowledge_gate_command(request, command_id):
+def device_acknowledge_gate_command(
+    request,
+    command_id
+):
+
+    # --------------------------------------------------------
+    # DEVICE AUTHENTICATION
+    # --------------------------------------------------------
+
     if not _device_api_key_is_valid(request):
+
         return Response(
-            {"error": "Valid device authentication is required."}, status=401
+            {
+                "error": (
+                    "Valid device authentication "
+                    "is required."
+                )
+            },
+            status=401
         )
-    result_status = request.data.get("status", "")
-    if result_status not in ["succeeded", "failed"]:
+
+    # --------------------------------------------------------
+    # RESULT STATUS
+    # --------------------------------------------------------
+
+    result_status = request.data.get(
+        "status",
+        ""
+    )
+
+    if result_status not in [
+        "succeeded",
+        "failed",
+    ]:
+
         return Response(
-            {"error": "Acknowledgement status must be succeeded or failed."},
-            status=400,
+            {
+                "error": (
+                    "Acknowledgement status must be "
+                    "succeeded or failed."
+                )
+            },
+            status=400
         )
+
+    # --------------------------------------------------------
+    # ACKNOWLEDGE GATE COMMAND
+    # --------------------------------------------------------
+
     try:
+
         command, changed = acknowledge_gate_command(
             command_id=command_id,
             result_status=result_status,
-            error_message=request.data.get("error", ""),
+            error_message=request.data.get(
+                "error",
+                ""
+            ),
         )
+
     except GateCommand.DoesNotExist:
-        return Response({"error": "Gate command not found."}, status=404)
+
+        return Response(
+            {
+                "error": "Gate command not found."
+            },
+            status=404
+        )
+
     except ValueError as exc:
-        return Response({"error": str(exc)}, status=409)
-    return Response({
-        "id": command.id,
-        "gate": command.gate.gate_type,
-        "action": command.action,
-        "status": command.status,
-        "physical_state": "open" if command.gate.is_physically_open else "closed"
-            if command.gate.is_physically_open is False else "unknown",
-        "changed": changed,
-    })
 
+        return Response(
+            {
+                "error": str(exc)
+            },
+            status=409
+        )
 
+    # --------------------------------------------------------
+    # BOOKING
+    # --------------------------------------------------------
 
+    booking = command.booking
 
+    # --------------------------------------------------------
+    # PARKING SLOT
+    # --------------------------------------------------------
 
+    parking_slot = None
 
+    if booking:
 
+        parking_slot = booking.parking_slot
 
-# ==========================
+    # --------------------------------------------------------
+    # LED COMMAND
+    # --------------------------------------------------------
+
+    led_command = None
+
+    # ========================================================
+    # LED RULE
+    #
+    # ONLY:
+    #   - entrance gate
+    #   - successful open command
+    #   - parking slot exists
+    #
+    # will create an LED command.
+    #
+    # EXIT GATE:
+    #   NEVER creates an LED command.
+    #
+    # NO LED COLOUR IS USED.
+    # ========================================================
+
+    if (
+        result_status == "succeeded"
+        and command.action == "open"
+        and command.gate.gate_type == "entrance"
+        and parking_slot
+    ):
+
+        # ----------------------------------------------------
+        # FIND LED ASSIGNED TO THIS PARKING SLOT
+        # ----------------------------------------------------
+
+        led = ParkingLED.objects.filter(
+            parking_slot=parking_slot
+        ).first()
+
+        # ----------------------------------------------------
+        # CREATE LED COMMAND
+        # ----------------------------------------------------
+
+        if led:
+
+            now = timezone.now()
+
+            led_command = LEDCommand.objects.create(
+                led=led,
+
+                parking_slot=parking_slot,
+
+                action="on",
+
+                status="pending",
+
+                requested_via="lifecycle",
+
+                expires_at=(
+                    now
+                    + timezone.timedelta(
+                        seconds=30
+                    )
+                ),
+            )
+
+            # ------------------------------------------------
+            # SYSTEM EVENT
+            # ------------------------------------------------
+
+            SystemEvent.objects.create(
+                event_type="other",
+
+                source="gate_led",
+
+                description=(
+                    f"LED "
+                    f"{led.led_name} "
+                    f"turned ON after "
+                    f"entrance gate "
+                    f"{command.gate.gate_name} "
+                    f"opened for parking slot "
+                    f"{parking_slot.slot_number}."
+                ),
+
+                parking_slot=parking_slot,
+
+                booking=booking,
+            )
+
+    # --------------------------------------------------------
+    # RESPONSE
+    # --------------------------------------------------------
+
+    return Response(
+        {
+            "id": command.id,
+
+            "gate_id": command.gate_id,
+
+            "gate": command.gate.gate_type,
+
+            "gate_name": command.gate.gate_name,
+
+            "action": command.action,
+
+            "status": command.status,
+
+            "booking_id": (
+                booking.id
+                if booking
+                else None
+            ),
+
+            "slot_number": (
+                parking_slot.slot_number
+                if parking_slot
+                else None
+            ),
+
+            "led_command_id": (
+                led_command.id
+                if led_command
+                else None
+            ),
+
+            "led": (
+                led_command.led.led_name
+                if led_command
+                else None
+            ),
+
+            "message": (
+                "Entrance gate acknowledged "
+                "and LED command created."
+                if led_command
+                else
+                "Gate command acknowledged."
+            ),
+        }
+    )
+    
+    
+    
+# ============================================================
 # OPEN GATE
-# ==========================
-
+# ============================================================
 
 @api_view(["POST"])
 @permission_classes([IsAdminUser])
-def open_gate(request, gate_id):
+def open_gate(
+    request,
+    gate_id
+):
 
+    # --------------------------------------------------------
+    # FIND GATE
+    # --------------------------------------------------------
 
     try:
 
-
         gate = Gate.objects.get(
-
             id=gate_id
-
         )
-
 
     except Gate.DoesNotExist:
 
-
-        return Response({
-
-            "error":
-            "Gate not found"
-
-        },
-
-        status=404
-
+        return Response(
+            {
+                "error": "Gate not found."
+            },
+            status=404
         )
 
+    # --------------------------------------------------------
+    # GET GATE TYPE
+    # --------------------------------------------------------
 
+    gate_type = gate.gate_type
 
+    # ========================================================
+    # ENTRANCE GATE
+    # ========================================================
 
+    if gate_type == "entrance":
 
-    changed = not gate.is_open
+        # ----------------------------------------------------
+        # SLOT IS REQUIRED
+        # ----------------------------------------------------
+
+        slot_number = request.data.get(
+            "slot_number"
+        )
+
+        if not slot_number:
+
+            return Response(
+                {
+                    "error": (
+                        "slot_number is required "
+                        "for entrance gate."
+                    )
+                },
+                status=400
+            )
+
+        # ----------------------------------------------------
+        # FIND PARKING SLOT
+        # ----------------------------------------------------
+
+        try:
+
+            parking_slot = ParkingSlot.objects.get(
+                slot_number=slot_number
+            )
+
+        except ParkingSlot.DoesNotExist:
+
+            return Response(
+                {
+                    "error": (
+                        f"Parking slot "
+                        f"{slot_number} not found."
+                    )
+                },
+                status=404
+            )
+
+        # ----------------------------------------------------
+        # FIND ACTIVE BOOKING
+        # ----------------------------------------------------
+
+        booking = Booking.objects.filter(
+            parking_slot=parking_slot,
+
+            booking_date=timezone.localdate(),
+
+            status__in=[
+                "confirmed",
+                "active",
+                "parked",
+                "overtime",
+            ],
+        ).order_by(
+            "-created_at"
+        ).first()
+
+        # ----------------------------------------------------
+        # BOOKING MUST EXIST
+        # ----------------------------------------------------
+
+        if not booking:
+
+            return Response(
+                {
+                    "error": (
+                        f"No active booking found "
+                        f"for parking slot "
+                        f"{slot_number}."
+                    )
+                },
+                status=409
+            )
+
+    # ========================================================
+    # EXIT GATE
+    # ========================================================
+
+    elif gate_type == "exit":
+
+        # ----------------------------------------------------
+        # EXIT DOES NOT USE SLOT NUMBER
+        # ----------------------------------------------------
+
+        parking_slot = None
+
+        booking = None
+
+    # ========================================================
+    # UNKNOWN GATE TYPE
+    # ========================================================
+
+    else:
+
+        return Response(
+            {
+                "error": (
+                    f"Unsupported gate type: "
+                    f"{gate_type}"
+                )
+            },
+            status=400
+        )
+
+    # ========================================================
+    # REMOVE OLD PENDING COMMANDS
+    # ========================================================
+
+    GateCommand.objects.filter(
+        gate=gate,
+        status="pending",
+    ).update(
+        status="expired"
+    )
+
+    # ========================================================
+    # UPDATE DATABASE GATE STATE
+    # ========================================================
+
     gate.is_open = True
-    gate.save(update_fields=["is_open", "updated_at"])
-    if changed:
-        create_gate_command(
-            gate=gate,
-            action="open",
-            requested_via="admin",
-            requested_by_user=request.user,
-        )
-        SystemEvent.objects.create(event_type="gate_opened", source="admin_gate", description=f"Admin manually opened {gate.gate_name}.", user=request.user, gate=gate)
+
+    gate.save(
+        update_fields=[
+            "is_open",
+            "updated_at",
+        ]
+    )
+
+    # ========================================================
+    # CREATE NEW GATE COMMAND
+    # ========================================================
+
+    gate_command, _created = create_gate_command(
+        gate=gate,
+
+        action="open",
+
+        requested_via="admin",
+
+        requested_by_user=request.user,
+
+        booking=booking,
+    )
+
+    # ========================================================
+    # SYSTEM EVENT
+    # ========================================================
+
+    SystemEvent.objects.create(
+        event_type="gate_opened",
+
+        source="admin_gate",
+
+        description=(
+            f"Admin manually opened "
+            f"{gate.gate_name}."
+            +
+            (
+                f" Parking slot "
+                f"{parking_slot.slot_number}."
+                if parking_slot
+                else
+                ""
+            )
+        ),
+
+        user=request.user,
+
+        gate=gate,
+
+        parking_slot=parking_slot,
+
+        booking=booking,
+    )
+
+    # ========================================================
+    # RESPONSE
+    # ========================================================
+
+    return Response(
+        {
+            "message": "Gate opened.",
+
+            "gate": gate.gate_name,
+
+            "gate_type": gate.gate_type,
+
+            "status": gate.is_open,
+
+            "parking_slot": (
+                parking_slot.slot_number
+                if parking_slot
+                else None
+            ),
+
+            "booking_id": (
+                booking.id
+                if booking
+                else None
+            ),
+
+            "gate_command_id": gate_command.id,
+        }
+    )
 
 
-
-    return Response({
-
-        "message":
-        "Gate opened",
-
-
-        "gate":
-        gate.gate_name,
-
-
-        "status":
-        gate.is_open
-
-    })
-
-
-
-
-
-
-
-
-# ==========================
+# ============================================================
 # CLOSE GATE
-# ==========================
-
+# ============================================================
 
 @api_view(["POST"])
 @permission_classes([IsAdminUser])
-def close_gate(request, gate_id):
+def close_gate(
+    request,
+    gate_id
+):
 
+    # --------------------------------------------------------
+    # FIND GATE
+    # --------------------------------------------------------
 
     try:
 
-
         gate = Gate.objects.get(
-
             id=gate_id
-
         )
-
 
     except Gate.DoesNotExist:
 
-
-        return Response({
-
-            "error":
-            "Gate not found"
-
-        },
-
-        status=404
-
+        return Response(
+            {
+                "error": "Gate not found."
+            },
+            status=404
         )
 
+    # --------------------------------------------------------
+    # REMOVE OLD PENDING COMMANDS
+    # --------------------------------------------------------
 
+    GateCommand.objects.filter(
+        gate=gate,
+        status="pending",
+    ).update(
+        status="expired"
+    )
 
+    # --------------------------------------------------------
+    # CLOSE GATE
+    # --------------------------------------------------------
 
-
-    changed = gate.is_open
     gate.is_open = False
-    gate.save(update_fields=["is_open", "updated_at"])
-    if changed:
-        create_gate_command(
-            gate=gate,
-            action="close",
-            requested_via="admin",
-            requested_by_user=request.user,
-        )
-        SystemEvent.objects.create(event_type="gate_closed", source="admin_gate", description=f"Admin manually closed {gate.gate_name}.", user=request.user, gate=gate)
 
+    gate.save(
+        update_fields=[
+            "is_open",
+            "updated_at",
+        ]
+    )
 
+    # --------------------------------------------------------
+    # CREATE CLOSE COMMAND
+    #
+    # No booking is required for closing either gate.
+    # --------------------------------------------------------
 
-    return Response({
+    gate_command, _created = create_gate_command(
+        gate=gate,
 
-        "message":
-        "Gate closed",
+        action="close",
 
+        requested_via="admin",
 
-        "gate":
-        gate.gate_name,
+        requested_by_user=request.user,
 
+        booking=None,
+    )
 
-        "status":
-        gate.is_open
+    # --------------------------------------------------------
+    # SYSTEM EVENT
+    # --------------------------------------------------------
 
-    })
+    SystemEvent.objects.create(
+        event_type="gate_closed",
 
+        source="admin_gate",
 
+        description=(
+            f"Admin manually closed "
+            f"{gate.gate_name}."
+        ),
 
+        user=request.user,
 
+        gate=gate,
+    )
 
+    # --------------------------------------------------------
+    # RESPONSE
+    # --------------------------------------------------------
 
+    return Response(
+        {
+            "message": "Gate closed.",
+
+            "gate": gate.gate_name,
+
+            "gate_type": gate.gate_type,
+
+            "status": gate.is_open,
+
+            "gate_command_id": gate_command.id,
+        }
+    )
+    
+    
 
 
 # ==========================
@@ -2875,3 +3865,615 @@ def overstay_payment(request, booking_id):
                 messages.success(request, "Overstay payment completed. Request the Exit Gate again.")
             return redirect("back1:bookings")
     return render(request, "back1/overstay_payment.html", {"booking": booking, "wallet": wallet, "rate": rate})
+# ============================================================
+# LED API
+# ============================================================
+
+
+# ============================================================
+# GET LED COMMANDS
+# Raspberry Pi polls this endpoint
+# ============================================================
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def device_led_commands(request):
+
+    # --------------------------------------------------------
+    # DEVICE AUTHENTICATION
+    # --------------------------------------------------------
+
+    if not _device_api_key_is_valid(request):
+
+        return Response(
+            {
+                "error": "Valid device authentication is required."
+            },
+            status=401
+        )
+
+    now = timezone.now()
+
+    # --------------------------------------------------------
+    # EXPIRE OLD COMMANDS
+    # --------------------------------------------------------
+
+    LEDCommand.objects.filter(
+        status="pending",
+        expires_at__lte=now
+    ).update(
+        status="expired"
+    )
+
+    # --------------------------------------------------------
+    # GET PENDING COMMANDS
+    # --------------------------------------------------------
+
+    commands = (
+        LEDCommand.objects
+        .filter(
+            status="pending",
+            expires_at__gt=now
+        )
+        .select_related(
+            "led",
+            "parking_slot"
+        )
+        .order_by(
+            "created_at",
+            "id"
+        )
+    )
+
+    # --------------------------------------------------------
+    # RESPONSE
+    # --------------------------------------------------------
+
+    return Response({
+
+        "commands": [
+
+            {
+                "id": command.id,
+
+                "led_id": command.led_id,
+
+                "slot_number": (
+                    command.parking_slot.slot_number
+                ),
+
+                "led_name": (
+                    command.led.led_name
+                ),
+
+                "action": command.action,
+
+                "status": command.status,
+
+                "created_at": command.created_at,
+
+                "expires_at": command.expires_at,
+            }
+
+            for command in commands
+        ]
+
+    })
+
+
+# ============================================================
+# CLAIM LED COMMAND
+# Raspberry Pi claims a pending command
+# ============================================================
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def device_claim_led_command(
+    request,
+    command_id
+):
+
+    # --------------------------------------------------------
+    # DEVICE AUTHENTICATION
+    # --------------------------------------------------------
+
+    if not _device_api_key_is_valid(request):
+
+        return Response(
+            {
+                "error": "Valid device authentication is required."
+            },
+            status=401
+        )
+
+    # --------------------------------------------------------
+    # FIND COMMAND
+    # --------------------------------------------------------
+
+    try:
+
+        command = (
+            LEDCommand.objects
+            .select_related(
+                "led",
+                "parking_slot"
+            )
+            .get(
+                id=command_id
+            )
+        )
+
+    except LEDCommand.DoesNotExist:
+
+        return Response(
+            {
+                "error": "LED command not found."
+            },
+            status=404
+        )
+
+    # --------------------------------------------------------
+    # CHECK STATUS
+    # --------------------------------------------------------
+
+    if command.status != "pending":
+
+        return Response(
+            {
+                "error": (
+                    f"LED command is already "
+                    f"{command.status}."
+                )
+            },
+            status=409
+        )
+
+    # --------------------------------------------------------
+    # CHECK EXPIRATION
+    # --------------------------------------------------------
+
+    if command.expires_at <= timezone.now():
+
+        command.status = "expired"
+
+        command.save(
+            update_fields=[
+                "status"
+            ]
+        )
+
+        return Response(
+            {
+                "error": "LED command has expired."
+            },
+            status=409
+        )
+
+    # --------------------------------------------------------
+    # CLAIM COMMAND
+    # --------------------------------------------------------
+
+    command.status = "executing"
+
+    command.acknowledged_at = timezone.now()
+
+    command.save(
+        update_fields=[
+            "status",
+            "acknowledged_at"
+        ]
+    )
+
+    # --------------------------------------------------------
+    # RESPONSE
+    # --------------------------------------------------------
+
+    return Response({
+
+        "id": command.id,
+
+        "led_id": command.led_id,
+
+        "slot_number": (
+            command.parking_slot.slot_number
+        ),
+
+        "led_name": (
+            command.led.led_name
+        ),
+
+        "action": command.action,
+
+        "status": command.status,
+
+        "expires_at": command.expires_at,
+
+    })
+
+
+# ============================================================
+# ACKNOWLEDGE LED COMMAND
+# Raspberry Pi reports execution result
+# ============================================================
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def device_acknowledge_led_command(
+    request,
+    command_id
+):
+
+    # --------------------------------------------------------
+    # DEVICE AUTHENTICATION
+    # --------------------------------------------------------
+
+    if not _device_api_key_is_valid(request):
+
+        return Response(
+            {
+                "error": "Valid device authentication is required."
+            },
+            status=401
+        )
+
+    # --------------------------------------------------------
+    # GET RESULT STATUS
+    # --------------------------------------------------------
+
+    result_status = request.data.get(
+        "status",
+        ""
+    )
+
+    # --------------------------------------------------------
+    # VALIDATE RESULT STATUS
+    # --------------------------------------------------------
+
+    if result_status not in [
+        "succeeded",
+        "failed"
+    ]:
+
+        return Response(
+            {
+                "error": (
+                    "Acknowledgement status must be "
+                    "succeeded or failed."
+                )
+            },
+            status=400
+        )
+
+    # --------------------------------------------------------
+    # FIND COMMAND
+    # --------------------------------------------------------
+
+    try:
+
+        command = (
+            LEDCommand.objects
+            .select_related(
+                "led",
+                "parking_slot"
+            )
+            .get(
+                id=command_id
+            )
+        )
+
+    except LEDCommand.DoesNotExist:
+
+        return Response(
+            {
+                "error": "LED command not found."
+            },
+            status=404
+        )
+
+    # --------------------------------------------------------
+    # VALIDATE COMMAND STATUS
+    # --------------------------------------------------------
+
+    if command.status not in [
+        "executing",
+        "pending"
+    ]:
+
+        return Response(
+            {
+                "error": (
+                    "LED command cannot be acknowledged "
+                    f"because its current status is "
+                    f"{command.status}."
+                )
+            },
+            status=409
+        )
+
+    # --------------------------------------------------------
+    # ERROR MESSAGE
+    # --------------------------------------------------------
+
+    error_message = request.data.get(
+        "error",
+        ""
+    )
+
+    # --------------------------------------------------------
+    # UPDATE COMMAND
+    # --------------------------------------------------------
+
+    command.status = result_status
+
+    command.completed_at = timezone.now()
+
+    command.error_message = error_message
+
+    command.save(
+        update_fields=[
+            "status",
+            "completed_at",
+            "error_message"
+        ]
+    )
+
+    # ========================================================
+    # UPDATE ACTUAL LED DATABASE STATUS
+    # ========================================================
+
+    if result_status == "succeeded":
+
+        if command.action == "on":
+
+            command.led.status = "on"
+
+        elif command.action == "off":
+
+            command.led.status = "off"
+
+        command.led.save(
+            update_fields=[
+                "status",
+                "updated_at"
+            ]
+        )
+
+        # ----------------------------------------------------
+        # SYSTEM EVENT
+        # ----------------------------------------------------
+
+        SystemEvent.objects.create(
+
+            event_type="other",
+
+            source="raspberry_pi_led",
+
+            description=(
+                f"LED {command.led.led_name} "
+                f"turned {command.action.upper()} "
+                f"for parking slot "
+                f"{command.parking_slot.slot_number}."
+            ),
+
+            parking_slot=command.parking_slot
+        )
+
+    # ========================================================
+    # RESPONSE
+    # ========================================================
+
+    return Response({
+
+        "id": command.id,
+
+        "led_id": command.led_id,
+
+        "slot_number": (
+            command.parking_slot.slot_number
+        ),
+
+        "led_name": (
+            command.led.led_name
+        ),
+
+        "action": command.action,
+
+        "status": command.status,
+
+        "physical_led_status": (
+            command.led.status
+        ),
+
+    })
+
+
+# ============================================================
+# CREATE LED COMMAND
+# Admin manually creates an LED command
+# ============================================================
+
+@api_view(["POST"])
+@permission_classes([IsAdminUser])
+def create_led_command(request):
+
+    # --------------------------------------------------------
+    # GET REQUEST DATA
+    # --------------------------------------------------------
+
+    slot_number = request.data.get(
+        "slot_number"
+    )
+
+    led_name = request.data.get(
+        "led_name"
+    )
+
+    action = request.data.get(
+        "action"
+    )
+
+    # --------------------------------------------------------
+    # VALIDATE SLOT
+    # --------------------------------------------------------
+
+    if not slot_number:
+
+        return Response(
+            {
+                "error": "slot_number is required."
+            },
+            status=400
+        )
+
+    # --------------------------------------------------------
+    # VALIDATE LED NAME
+    # --------------------------------------------------------
+
+    if not led_name:
+
+        return Response(
+            {
+                "error": "led_name is required."
+            },
+            status=400
+        )
+
+    # --------------------------------------------------------
+    # VALIDATE ACTION
+    # --------------------------------------------------------
+
+    if action not in [
+        "on",
+        "off"
+    ]:
+
+        return Response(
+            {
+                "error": (
+                    "action must be 'on' or 'off'."
+                )
+            },
+            status=400
+        )
+
+    # --------------------------------------------------------
+    # FIND PARKING SLOT
+    # --------------------------------------------------------
+
+    try:
+
+        parking_slot = ParkingSlot.objects.get(
+            slot_number=slot_number
+        )
+
+    except ParkingSlot.DoesNotExist:
+
+        return Response(
+            {
+                "error": (
+                    f"Parking slot "
+                    f"{slot_number} not found."
+                )
+            },
+            status=404
+        )
+
+    # --------------------------------------------------------
+    # FIND LED
+    # --------------------------------------------------------
+
+    try:
+
+        led = ParkingLED.objects.get(
+            parking_slot=parking_slot,
+            led_name=led_name
+        )
+
+    except ParkingLED.DoesNotExist:
+
+        return Response(
+            {
+                "error": (
+                    f"LED {led_name} does not exist "
+                    f"for slot {slot_number}."
+                )
+            },
+            status=404
+        )
+
+    # --------------------------------------------------------
+    # CREATE COMMAND
+    # --------------------------------------------------------
+
+    now = timezone.now()
+
+    command = LEDCommand.objects.create(
+
+        led=led,
+
+        parking_slot=parking_slot,
+
+        action=action,
+
+        status="pending",
+
+        requested_via="admin",
+
+        expires_at=(
+            now +
+            timezone.timedelta(
+                seconds=30
+            )
+        )
+
+    )
+
+    # --------------------------------------------------------
+    # SYSTEM EVENT
+    # --------------------------------------------------------
+
+    SystemEvent.objects.create(
+
+        event_type="admin_action",
+
+        source="admin_led",
+
+        description=(
+            f"Admin requested LED "
+            f"{led.led_name} to turn "
+            f"{action.upper()} for "
+            f"parking slot "
+            f"{slot_number}."
+        ),
+
+        user=request.user,
+
+        parking_slot=parking_slot
+
+    )
+
+    # --------------------------------------------------------
+    # RESPONSE
+    # --------------------------------------------------------
+
+    return Response({
+
+        "message": "LED command created.",
+
+        "id": command.id,
+
+        "slot_number": (
+            parking_slot.slot_number
+        ),
+
+        "led_name": (
+            led.led_name
+        ),
+
+        "action": action,
+
+        "status": command.status,
+
+        "expires_at": command.expires_at,
+
+    })

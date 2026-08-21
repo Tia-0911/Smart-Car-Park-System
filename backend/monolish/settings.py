@@ -34,9 +34,8 @@ if not SECRET_KEY:
     SECRET_KEY = "django-insecure-development-only-change-me"
 
 ALLOWED_HOSTS = [host.strip() for host in os.getenv(
-    "ALLOWED_HOSTS", "localhost,127.0.0.1,[::1]"
+    "ALLOWED_HOSTS", "localhost,127.0.0.1,[::1],10.27.34.79"
 ).split(",") if host.strip()]
-
 
 # Application definition
 
@@ -93,6 +92,9 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+        "OPTIONS": {
+            "timeout": 20,
+        },
     }
 }
 
