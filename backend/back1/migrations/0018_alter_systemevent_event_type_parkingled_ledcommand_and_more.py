@@ -19,8 +19,8 @@ class Migration(migrations.Migration):
                     ("vehicle_detected", "Vehicle Detected"),
                     ("gate_opened", "Gate Opened"),
                     ("gate_closed", "Gate Closed"),
-                    ("space_occupied", "Parking Space Occupied"),
-                    ("space_available", "Parking Space Available"),
+                    ("space_occupied", "Space Occupied"),
+                    ("space_available", "Space Available"),
                     ("led_turned_on", "LED Turned On"),
                     ("led_turned_off", "LED Turned Off"),
                     ("sensor_offline", "Sensor Offline"),
@@ -194,16 +194,5 @@ class Migration(migrations.Migration):
             options={
                 "ordering": ["created_at", "id"],
             },
-        ),
-
-        migrations.AddConstraint(
-            model_name="ledcommand",
-            constraint=models.UniqueConstraint(
-                condition=models.Q(
-                    status__in=["pending", "executing"]
-                ),
-                fields=("led", "action"),
-                name="one_unresolved_led_action",
-            ),
         ),
     ]
