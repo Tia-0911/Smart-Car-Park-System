@@ -3367,90 +3367,55 @@ def open_gate(
     # --------------------------------------------------------
 
     gate_type = gate.gate_type
-
     # ========================================================
     # ENTRANCE GATE
     # ========================================================
 
     if gate_type == "entrance":
 
-        # ----------------------------------------------------
-        # SLOT IS REQUIRED
-        # ----------------------------------------------------
+        # Slot number is OPTIONAL for admin
+        slot_number = request.data.get("slot_number")
 
-        slot_number = request.data.get(
-            "slot_number"
-        )
+        parking_slot = None
+        booking = None
 
-        if not slot_number:
+        # If admin provided a slot number, try to find it
+        if slot_number:
 
-            return Response(
-                {
-                    "error": (
-                        "slot_number is required "
-                        "for entrance gate."
-                    )
-                },
-                status=400
-            )
+            try:
+                parking_slot = ParkingSlot.objects.get(
+                    slot_number=slot_number
+                )
 
-        # ----------------------------------------------------
-        # FIND PARKING SLOT
-        # ----------------------------------------------------
+            except ParkingSlot.DoesNotExist:
 
-        try:
+                return Response(
+                    {
+                        "error": (
+                            f"Parking slot "
+                            f"{slot_number} not found."
+                        )
+                    },
+                    status=404
+                )
 
-            parking_slot = ParkingSlot.objects.get(
-                slot_number=slot_number
-            )
+            # Try to find an active booking
+            booking = Booking.objects.filter(
+                parking_slot=parking_slot,
+                booking_date=timezone.localdate(),
+                status__in=[
+                    "confirmed",
+                    "active",
+                    "parked",
+                    "overtime",
+                ],
+            ).order_by(
+                "-created_at"
+            ).first()
 
-        except ParkingSlot.DoesNotExist:
+        # No slot number or no booking:
+        # Admin can still open the gate.
 
-            return Response(
-                {
-                    "error": (
-                        f"Parking slot "
-                        f"{slot_number} not found."
-                    )
-                },
-                status=404
-            )
-
-        # ----------------------------------------------------
-        # FIND ACTIVE BOOKING
-        # ----------------------------------------------------
-
-        booking = Booking.objects.filter(
-            parking_slot=parking_slot,
-
-            booking_date=timezone.localdate(),
-
-            status__in=[
-                "confirmed",
-                "active",
-                "parked",
-                "overtime",
-            ],
-        ).order_by(
-            "-created_at"
-        ).first()
-
-        # ----------------------------------------------------
-        # BOOKING MUST EXIST
-        # ----------------------------------------------------
-
-        if not booking:
-
-            return Response(
-                {
-                    "error": (
-                        f"No active booking found "
-                        f"for parking slot "
-                        f"{slot_number}."
-                    )
-                },
-                status=409
-            )
 
     # ========================================================
     # EXIT GATE
@@ -3458,13 +3423,9 @@ def open_gate(
 
     elif gate_type == "exit":
 
-        # ----------------------------------------------------
-        # EXIT DOES NOT USE SLOT NUMBER
-        # ----------------------------------------------------
-
         parking_slot = None
-
         booking = None
+
 
     # ========================================================
     # UNKNOWN GATE TYPE
@@ -3481,7 +3442,7 @@ def open_gate(
             },
             status=400
         )
-
+        
     # ========================================================
     # REMOVE OLD PENDING COMMANDS
     # ========================================================
