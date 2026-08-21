@@ -1,70 +1,29 @@
 # Smart Car Park System
 
 ## Project Overview
+A smart parking system using IoT sensors, Raspberry Pi, a Django backend and a web dashboard rendered with Django templates.
 
-Smart Car Park System is an IoT and Cloud-based project that aims to improve parking management by monitoring parking space availability in real time.
+## Sensors Used
 
-The system uses sensors connected with Raspberry Pi to detect whether parking spaces are occupied. The collected data is sent to a cloud-based backend system and displayed through a web dashboard.
+### 1. Parking Occupancy Sensor
+- Detect whether a parking slot is occupied or available.
 
-## Objectives
+### 2. Temperature and Humidity Sensor
+- Monitor environmental conditions inside the parking area.
 
-- Monitor real-time parking slot availability
-- Detect vehicle occupancy using sensors
-- Store parking data in a cloud database
-- Provide a dashboard for users to view parking status
-- Support smart parking management
+### 3. Fire Sensor
+- Detect possible fire emergencies.
 
 ## System Components
 
-## 1. IoT Layer (Raspberry Pi + Sensors)
-
-Responsibilities:
-- Detect vehicle presence in parking spaces
-- Collect sensor data
-- Send data to backend API
-
-Technologies:
 - Raspberry Pi
-- Ultrasonic / IR Sensors
+- Django REST Framework Backend
+- Django Template Dashboard
+- Django-managed Database
 
----
+## Main Features
 
-## 2. Backend System
-
-Responsibilities:
-- Receive sensor data
-- Manage parking slot information
-- Handle booking information
-- Provide REST API services
-
-Technologies:
-- Python
-- Django REST Framework
-- Database
-
----
-
-## 3. Frontend Dashboard
-
-Responsibilities:
-- Display available parking spaces
-- Show real-time parking status
-- Provide user interface
-
-Technology:
-- React
-
----
-
-## 4. Cloud Infrastructure
-
-Cloud services are used for:
-
-- Hosting backend services
-- Database storage
-- Remote access
-- System scalability
-
----
-
-## System Architecture
+- Real-time parking availability monitoring
+- Parking booking system
+- Environmental monitoring
+- Safety alerts

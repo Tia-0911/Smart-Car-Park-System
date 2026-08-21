@@ -1,0 +1,17 @@
+{% extends "back1/base.html" %}
+{% block content %}
+<section class="dashboard-card modern-card p-4 mx-auto" style="max-width:700px">
+  <h1 class="h3 text-success">Booking Successful</h1><p>Your parking booking is confirmed.</p>
+  <dl class="row mt-4">
+    <dt class="col-6">Booking ID</dt><dd class="col-6">#{{ booking.id }}</dd>
+    <dt class="col-6">Date</dt><dd class="col-6">{{ booking.booking_date }}</dd>
+    <dt class="col-6">Time</dt><dd class="col-6">{{ booking.start_time|time:"H:i" }}–{{ booking.end_time|time:"H:i" }}</dd>
+    <dt class="col-6">Parking space</dt><dd class="col-6">{{ booking.parking_slot.slot_number }}</dd>
+    <dt class="col-6">Amount paid</dt><dd class="col-6">£{{ booking.normal_parking_amount }}</dd>
+    <dt class="col-6">Payment</dt><dd class="col-6">{{ booking.get_payment_status_display }}</dd>
+    <dt class="col-6">Booking</dt><dd class="col-6">{{ booking.get_status_display }}</dd>
+  </dl>
+  <a class="btn btn-primary" href="{% url 'back1:bookings' %}">My Booking</a>
+  <a class="btn btn-outline-secondary" href="{% url 'back1:customer-dashboard' %}">Dashboard</a>
+</section>
+{% endblock %}

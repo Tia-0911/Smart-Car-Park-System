@@ -1,0 +1,27 @@
+{% if event.source == "booking_email" %}
+<span class="event-type-badge event-type-email">✉️ Email Sent</span>
+{% elif event.source == "booking_cancellation" %}
+<span class="event-type-badge event-type-cancelled">❌ Booking Cancelled</span>
+{% elif event.source == "booking_lifecycle" %}
+<span class="event-type-badge event-type-exited">✅ Vehicle Exited</span>
+{% elif event.source == "booking_payment" or event.source == "overstay_payment" or event.event_type == "payment" %}
+<span class="event-type-badge event-type-payment">💳 Payment</span>
+{% elif "refund" in event.source or "Refund" in event.description or "refunded" in event.description %}
+<span class="event-type-badge event-type-refund">↩️ Refund</span>
+{% elif event.event_type == "vehicle_detected" or event.source == "device_sensor" and event.sensor.sensor_type == "entrance" or event.source == "device_sensor" and event.sensor.sensor_type == "exit" %}
+<span class="event-type-badge event-type-vehicle">🚗 Vehicle Detected</span>
+{% elif event.event_type == "gate_opened" or event.source == "customer_gate" %}
+<span class="event-type-badge event-type-gate-open">🚪 Gate Opened</span>
+{% elif event.event_type == "gate_closed" or event.source == "gate_lifecycle" %}
+<span class="event-type-badge event-type-gate-closed">🔒 Gate Closed</span>
+{% elif event.event_type == "space_occupied" or event.source == "device_sensor" and event.sensor.sensor_type == "parking" and "occupied" in event.description %}
+<span class="event-type-badge event-type-parking-occupied">🅿️ Parking Occupied</span>
+{% elif event.event_type == "space_available" or event.source == "device_sensor" and event.sensor.sensor_type == "parking" and "left" in event.description %}
+<span class="event-type-badge event-type-parking-available">🅿️ Parking Available</span>
+{% elif event.event_type == "emergency" or event.source == "admin_emergency" or event.source == "emergency_notification" %}
+<span class="event-type-badge event-type-emergency">🚨 Emergency</span>
+{% elif event.event_type == "sensor_offline" or event.event_type == "sensor_online" or "sensor" in event.source %}
+<span class="event-type-badge event-type-sensor">📡 Sensor</span>
+{% else %}
+<span class="event-type-badge event-type-other">Other</span>
+{% endif %}

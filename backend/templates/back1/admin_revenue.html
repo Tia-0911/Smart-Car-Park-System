@@ -1,0 +1,30 @@
+{% extends "back1/base.html" %}
+{% block content %}
+<section class="admin-history-page">
+  <header class="history-page-header">
+    <div class="history-title-wrap"><span class="history-title-icon green">💰</span><div><h1>Revenue History</h1><p>Read-only paid transaction history for the selected date.</p></div></div>
+    <a class="history-back-button" href="{% url 'back1:admin-dashboard' %}?date={{ viewing_date|date:'Y-m-d' }}">← Back to Dashboard</a>
+  </header>
+
+  <div class="history-date-bar" aria-label="Revenue history viewing date">
+    <div class="history-date-label"><span>Viewing Date</span><strong>📅 {{ viewing_date|date:"d M Y" }}</strong></div>
+    <div class="history-date-actions">
+      <a href="?date={{ viewing_previous_date|date:'Y-m-d' }}&type={{ selected_type }}">← Previous Day</a><a href="?date={% now 'Y-m-d' %}&type={{ selected_type }}">Today</a><a href="?date={{ viewing_next_date|date:'Y-m-d' }}&type={{ selected_type }}">Next Day →</a>
+      <form method="get"><input type="date" name="date" value="{{ viewing_date|date:'Y-m-d' }}"><input type="hidden" name="type" value="{{ selected_type }}"><button type="submit">Apply</button></form>
+    </div>
+  </div>
+
+  <nav class="history-tabs" aria-label="Revenue category filter"><a class="{% if selected_type == 'all' %}active blue{% endif %}" href="?date={{ viewing_date|date:'Y-m-d' }}&type=all">All Revenue</a><a class="{% if selected_type == 'parking' %}active green{% endif %}" href="?date={{ viewing_date|date:'Y-m-d' }}&type=parking">Parking Revenue</a><a class="{% if selected_type == 'penalty' %}active red{% endif %}" href="?date={{ viewing_date|date:'Y-m-d' }}&type=penalty">Penalty Revenue</a></nav>
+
+  <div class="history-summary-grid">
+    <article class="history-summary-card accent-blue"><span class="summary-symbol">💰</span><div><small>Total Revenue</small><strong>£{{ total_revenue|floatformat:2 }}</strong><p>Paid income for selected date</p></div></article>
+    <article class="history-summary-card accent-green"><span class="summary-symbol">🅿️</span><div><small>Parking Revenue</small><strong>£{{ parking_revenue|floatformat:2 }}</strong><p>Normal parking payments</p></div></article>
+    <article class="history-summary-card accent-red"><span class="summary-symbol">⚠️</span><div><small>Penalty Revenue</small><strong>£{{ penalty_revenue|floatformat:2 }}</strong><p>Paid overstay charges</p></div></article>
+  </div>
+
+  <div class="history-table-card"><div class="history-table-wrap"><table class="history-table">
+    <thead><tr><th>Time</th><th>Booking ID</th><th>Customer</th><th>Type</th><th>Amount</th><th>Payment Status</th></tr></thead>
+    <tbody>{% for transaction in transactions %}<tr><td>{{ transaction.paid_at|time:"h:i A" }}</td><td>{% if transaction.booking_id %}<strong>#{{ transaction.booking_id }}</strong>{% else %}—{% endif %}</td><td><strong>{{ transaction.user.username }}</strong></td><td>{% if transaction.payment_category == "normal" %}<span class="history-pill type-parking">Parking</span>{% else %}<span class="history-pill type-penalty">Penalty</span>{% endif %}</td><td class="money-cell money-strong">£{{ transaction.amount|floatformat:2 }}</td><td><span class="history-pill payment-paid">{{ transaction.get_payment_status_display }}</span></td></tr>{% empty %}<tr><td colspan="6"><div class="history-empty"><span>💳</span><strong>No paid transactions for this date.</strong><p>Paid parking and penalty transactions will appear here.</p></div></td></tr>{% endfor %}</tbody>
+  </table></div></div>
+</section>
+{% endblock %}

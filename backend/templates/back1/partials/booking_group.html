@@ -1,0 +1,53 @@
+{% if bookings %}
+<div class="mb-4">
+    <h2 class="h5">{{ title }}</h2>
+    <div class="row g-3">
+        {% for booking in bookings %}
+        <div class="col-md-6">
+            <article class="border rounded-4 p-3 h-100">
+                <div class="d-flex justify-content-between gap-3">
+                    <strong>Booking #{{ booking.id }}</strong>
+                    <span class="badge text-bg-light">{{ booking.get_status_display }}</span>
+                </div>
+                <p class="mb-1 mt-3">{{ booking.booking_date }} · {{ booking.start_time }}–{{ booking.end_time }}</p>
+                <p class="mb-1">Space {{ booking.parking_slot.slot_number }}</p>
+                <p class="mb-1 text-secondary">Payment: {{ booking.get_payment_status_display }}</p>
+                <p class="mb-1">Amount: £{{ booking.normal_parking_amount }} · Outstanding: £{{ booking.outstanding_balance }}</p>
+                {% if booking.status == 'pending' and booking.payment_status == 'pending' %}
+                    <a class="btn btn-sm btn-primary mt-2" href="{% url 'back1:booking-payment' booking.id %}">Pay Now</a>
+                {% elif booking.payment_status == 'paid' %}
+                    <a class="btn btn-sm btn-outline-primary mt-2" href="{% url 'back1:booking-success' booking.id %}">Booking details</a>
+                {% endif %}
+                {% if booking.status == 'confirmed' or booking.status == 'active' %}
+                    <form class="customer-gate-form d-inline" method="post" action="{% url 'back1:customer-gate-request' booking.id 'entrance' %}">{% csrf_token %}<button class="btn btn-sm btn-success mt-2">Open Entrance Gate</button></form>
+                {% endif %}
+                {% if booking.can_customer_cancel %}
+                    <form class="booking-cancel-form d-inline" method="post" action="{% url 'back1:cancel_booking' booking.id %}" data-confirm="{{ booking.cancellation_message }}">{% csrf_token %}<button class="btn btn-sm btn-outline-danger mt-2">Cancel Booking</button></form>
+                {% endif %}
+                {% if booking.status == 'active' or booking.status == 'parked' or booking.status == 'overtime' %}
+                    {% if booking.outstanding_balance %}<a class="btn btn-sm btn-danger mt-2" href="{% url 'back1:overstay-payment' booking.id %}">Pay Overstay</a>{% endif %}
+                    <form class="customer-gate-form d-inline" method="post" action="{% url 'back1:customer-gate-request' booking.id 'exit' %}">{% csrf_token %}<button class="btn btn-sm btn-warning mt-2">Open Exit Gate</button></form>
+                {% endif %}
+            </article>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+<script>
+document.querySelectorAll('.customer-gate-form').forEach(form => form.addEventListener('submit', async event => {
+  event.preventDefault();
+  const response = await fetch(form.action, {method:'POST', headers:{'X-CSRFToken':form.querySelector('[name=csrfmiddlewaretoken]').value}});
+  const data = await response.json();
+  window.alert(data.message || data.error);
+  if (response.ok) window.location.reload();
+}));
+document.querySelectorAll('.booking-cancel-form').forEach(form => form.addEventListener('submit', async event => {
+  event.preventDefault();
+  if (!window.confirm(form.dataset.confirm)) return;
+  const response = await fetch(form.action, {method:'POST', headers:{'X-CSRFToken':form.querySelector('[name=csrfmiddlewaretoken]').value}});
+  const data = await response.json();
+  window.alert(data.message || data.error);
+  if (response.ok) window.location.reload();
+}));
+</script>

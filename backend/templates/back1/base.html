@@ -1,37 +1,205 @@
 {% load static %}
 
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
 
-    <!-- Required meta tags -->
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+<head>
 
-    <!-- Bootstrap CSS -->
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Smart Car Park Dashboard</title>
+
+
+    <!-- Bootstrap -->
     <link 
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" 
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" 
     rel="stylesheet">
 
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
 
-    <title>Smart System</title>
-
-  </head>
-
-  <body>
+    <!-- Bootstrap Icons -->
+    <link 
+    rel="stylesheet" 
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 
 
-    {% block content %}
+    <!-- Dashboard CSS -->
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=13">
 
-    {% endblock %}
+
+</head>
 
 
-    <!-- Bootstrap JavaScript -->
-    <script 
-    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js">
-    </script>
+<body>
 
-  </body>
+<main class="main-content">
+
+<div class="dashboard-header">
+
+
+    <!-- HERO IMAGE -->
+
+    <div class="hero-section">
+
+        <img 
+        src="{% static 'images/parking-logo.png' %}"
+        alt="Smart Car Park"
+        class="parking-banner">
+
+    </div>
+
+
+
+    <!-- HEADER RIGHT -->
+
+    <div class="header-right">
+
+
+        <div class="system-status">
+
+            <span class="status-dot"></span>
+
+            System Online
+
+        </div>
+
+        {% if user.is_authenticated and not user.is_staff and not user.is_superuser %}
+        <div class="wallet-status" aria-label="Customer wallet balance">
+            <i class="bi bi-wallet2" aria-hidden="true"></i>
+            <div>
+                <small>Wallet Balance</small>
+                <strong>£{{ customer_wallet_balance|floatformat:2 }}</strong>
+            </div>
+        </div>
+        {% endif %}
+
+
+
+        <div class="update-time" aria-label="Current UK time">
+
+            <i class="bi bi-calendar2-check"></i>
+
+            <div>
+                <small>Current Time · Live</small>
+                <strong id="current-time-value">{% now "h:i A" %}<br>{% now "d M Y" %}</strong>
+            </div>
+        </div>
+
+        <div class="update-time" aria-label="Latest emergency sensor sync">
+
+
+            <i class="bi bi-clock"></i>
+
+
+            <div>
+
+                <small>
+                    Last Sync
+                </small>
+
+
+                <strong id="last-sync-value">
+                    {% if latest_emergency_sync %}
+                    {{ latest_emergency_sync|time:"h:i A" }}
+                    <br>
+                    {{ latest_emergency_sync|date:"d M Y" }}
+                    {% else %}No data yet{% endif %}
+                </strong>
+
+
+            </div>
+
+
+        </div>
+
+
+    </div>
+
+
+</div>
+
+<script>
+(() => {
+    const target = document.getElementById("current-time-value");
+    if (!target) return;
+    const renderCurrentTime = () => {
+        const now = new Date();
+        const time = new Intl.DateTimeFormat("en-GB", {
+            timeZone: "Europe/London", hour: "2-digit", minute: "2-digit", hour12: true
+        }).format(now).toUpperCase();
+        const date = new Intl.DateTimeFormat("en-GB", {
+            timeZone: "Europe/London", day: "2-digit", month: "short", year: "numeric"
+        }).format(now);
+        target.innerHTML = `${time}<br>${date}`;
+    };
+    renderCurrentTime();
+    window.setInterval(renderCurrentTime, 60000);
+})();
+</script>
+
+<nav class="navbar navbar-expand-lg bg-white rounded-4 shadow-sm px-3 mb-4" aria-label="Main navigation">
+    <div class="container-fluid px-0">
+        <span class="navbar-brand fw-bold">Smart Car Park</span>
+        <div class="d-flex flex-wrap align-items-center gap-2 ms-auto">
+            {% if user.is_authenticated %}
+                {% if user.is_staff or user.is_superuser %}
+                    {% url 'admin:back1_parkingslot_changelist' as parking_spaces_url %}
+                    <a class="btn btn-sm admin-nav-link{% if request.resolver_match.url_name == 'admin-dashboard' %} active{% endif %}" href="{% url 'back1:admin-dashboard' %}">Dashboard</a>
+                    <a class="btn btn-sm admin-nav-link{% if request.resolver_match.url_name == 'admin-bookings' or request.resolver_match.url_name == 'admin-booking-edit' %} active{% endif %}" href="{% url 'back1:admin-bookings' %}">Bookings</a>
+                    <a class="btn btn-sm admin-nav-link{% if request.resolver_match.url_name == 'admin-customers' or request.resolver_match.url_name == 'admin-customer-edit' %} active{% endif %}" href="{% url 'back1:admin-customers' %}">Customers</a>
+                    <a class="btn btn-sm admin-nav-link{% if request.path == parking_spaces_url %} active{% endif %}" href="{{ parking_spaces_url }}">Parking Spaces</a>
+                    <a class="btn btn-sm admin-nav-link{% if request.resolver_match.url_name == 'admin-alerts' %} active{% endif %}" href="{% url 'back1:admin-alerts' %}">Alerts</a>
+                    <div class="dropdown admin-history-dropdown">
+                        <button class="btn btn-sm admin-nav-link dropdown-toggle{% if request.resolver_match.url_name == 'admin-bookings' or request.resolver_match.url_name == 'admin-revenue' or request.resolver_match.url_name == 'admin-sensors' or request.resolver_match.url_name == 'admin-events' %} active{% endif %}" type="button" id="admin-history-menu" data-bs-toggle="dropdown" aria-expanded="false">
+                            History
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="admin-history-menu">
+                            <li><a class="dropdown-item{% if request.resolver_match.url_name == 'admin-bookings' %} active{% endif %}" href="{% url 'back1:admin-bookings' %}">📅 Booking History</a></li>
+                            <li><a class="dropdown-item{% if request.resolver_match.url_name == 'admin-revenue' %} active{% endif %}" href="{% url 'back1:admin-revenue' %}">💳 Revenue &amp; Payment History</a></li>
+                            <li><a class="dropdown-item{% if request.resolver_match.url_name == 'admin-sensors' %} active{% endif %}" href="{% url 'back1:admin-sensors' %}">📡 Sensor History</a></li>
+                            <li><a class="dropdown-item{% if request.resolver_match.url_name == 'admin-events' %} active{% endif %}" href="{% url 'back1:admin-events' %}">⚡ System Event Log</a></li>
+                        </ul>
+                    </div>
+                {% else %}
+                    <a class="btn btn-sm btn-outline-primary" href="{% url 'back1:customer-dashboard' %}">Dashboard</a>
+                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'back1:booking-create' %}">Book Parking</a>
+                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'back1:bookings' %}">My Booking</a>
+                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'back1:profile' %}">Profile</a>
+                {% endif %}
+                <form method="post" action="{% url 'logout' %}" class="m-0">
+                    {% csrf_token %}
+                    <button class="btn btn-sm btn-danger" type="submit">Logout</button>
+                </form>
+            {% else %}
+                <a class="btn btn-sm btn-outline-primary" href="{% url 'login' %}">Login</a>
+                <a class="btn btn-sm btn-primary" href="{% url 'back1:register' %}">Register</a>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }}" role="alert">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+
+
+<!-- PAGE CONTENT -->
+
+
+{% block content %}
+
+{% endblock %}
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+
 </html>
